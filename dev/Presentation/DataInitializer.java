@@ -1,8 +1,6 @@
 package Presentation;
 
-import Domain.*;
 import Service.InventoryService;
-import java.time.LocalDate;
 
 /**
  * Utility class to seed the system with initial sample data.
