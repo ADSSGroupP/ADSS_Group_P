@@ -17,6 +17,7 @@ public class Main {
         // Step 3: Launch the UI (Presentation Layer) [cite: 231]
         InventoryMenu ui = new InventoryMenu(service);
         ui.start();
+
         System.out.print("Rotem");
     }
 }
