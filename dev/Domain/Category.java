@@ -11,7 +11,7 @@ import java.util.List;
 public class Category {
     // --- Fields ---
     private int id;                         // Unique ID for the category
-    private String name;                    // Category name (e.g., "Dairy", "Milk") [cite: 5, 6]
+    private String name;                    // Category name (e.g., "Dairy", "Milk")
     private Category parentCategory;        // Reference to the parent (null if top-level)
     private List<Discount> categoryDiscounts; // List of discounts applied to this category
 
@@ -33,9 +33,9 @@ public class Category {
     // --- Business Logic Methods ---
 
     /**
-     * Adds a discount to this category. [cite: 11]
+     * Adds a discount to this category.
      * According to requirements, this discount will apply to all products
-     * within this category and its sub-categories. [cite: 10]
+     * within this category and its sub-categories.
      * @param d The discount to add.
      */
     public void addDiscount(Discount d) {
@@ -89,7 +89,7 @@ public class Category {
     }
 
     /**
-     * Overriding toString to display the category name in reports. [cite: 8, 12]
+     * Overriding toString to display the category name in reports.
      */
     @Override
     public String toString() {

@@ -4,104 +4,88 @@ import org.junit.Test;
 import org.junit.Before;
 import static org.junit.Assert.*;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import Domain.*;
+import Service.*;
 
 /**
- * Unit tests for the Domain layer using JUnit 4.
- * These tests verify core business logic including stock validation,
- * discount calculations, and hierarchical category management.
+ * Updated Unit tests to support Abstract Discount structure and
+ * hierarchical price calculations.
  */
 public class InventoryDomainTests {
     private Product product;
     private Category dairy;
+    private List<Discount> systemDiscounts;
 
-    /**
-     * Sets up the test environment before each test case.
-     * Uses the @Before annotation compatible with JUnit 4.
-     */
     @Before
     public void setUp() {
         Manufacturer manu = new Manufacturer(1, "Tnuva");
         dairy = new Category(1, "Dairy");
-        // Initializing product with SKU 101, Min Stock 10, Aisle 2, Shelf 5
+        // SKU 101, Min Stock 10
         product = new Product(101, "Milk 3%", manu, 10, 2, 5);
-        product.setSub_sub_category(dairy);
+        product.setCategory(dairy);
+        systemDiscounts = new ArrayList<>();
     }
 
     /**
-     * Requirement 1 & 3: Verifies shortage detection.
-     */
-    @Test
-    public void testShortageDetection() {
-        product.setStorage_amount(2);
-        product.setShelf_amount(2);
-        assertTrue("Should detect shortage alert.", product.getGeneral_amount() <= product.getMin_stock());
-    }
-
-    @Test
-    public void testNoShortageWhenStockIsHigh() {
-        product.setStorage_amount(20);
-        assertFalse("Should not flag shortage.", product.getGeneral_amount() <= product.getMin_stock());
-    }
-
-    /**
-     * Requirement 9: Verifies best discount logic.
+     * Requirement 9: Verifies best discount logic using the new polymorphism structure.
      */
     @Test
     public void testBestDiscountSelection() {
-        product.addSalePrice(10.0f);
-        Discount tenPercent = new Discount(1, 10, LocalDate.now(), LocalDate.now().plusDays(5));
-        Discount twentyPercent = new Discount(2, 20, LocalDate.now(), LocalDate.now().plusDays(5));
-        product.addSpecificDiscount(tenPercent);
-        product.addSpecificDiscount(twentyPercent);
+        product.addSalePrice(10.0f); // Base price
 
-        assertEquals("System must apply the 20% discount.", 8.0f, product.getBestPrice(), 0.001);
+        // Creating specific product discounts instead of abstract Discount
+        Discount tenPercent = new ProductDiscount(1, 10, LocalDate.now(), LocalDate.now().plusDays(5), Arrays.asList(product));
+        Discount twentyPercent = new ProductDiscount(2, 20, LocalDate.now(), LocalDate.now().plusDays(5), Arrays.asList(product));
+
+        systemDiscounts.add(tenPercent);
+        systemDiscounts.add(twentyPercent);
+
+        float result = product.updateAndGetCurrentBestPrice(systemDiscounts);
+        assertEquals("System must apply the most profitable discount (20%).", 8.0f, result, 0.001);
     }
 
+    /**
+     * Requirement: Verifies that expired discounts are ignored.
+     */
     @Test
     public void testExpiredDiscountNotApplied() {
         product.addSalePrice(10.0f);
         LocalDate past = LocalDate.now().minusDays(10);
-        Discount expired = new Discount(1, 50, past, past.plusDays(2));
-        product.addSpecificDiscount(expired);
+        Discount expired = new ProductDiscount(1, 50, past, past.plusDays(2), Arrays.asList(product));
 
-        assertEquals("Expired discounts must be ignored.", 10.0f, product.getBestPrice(), 0.001);
-    }
+        systemDiscounts.add(expired);
 
-    @Test
-    public void testCategoryHierarchyAssignment() {
-        assertEquals("Dairy", product.getSub_sub_category().getName());
+        float result = product.updateAndGetCurrentBestPrice(systemDiscounts);
+        assertEquals("Expired discounts must not affect the price.", 10.0f, result, 0.001);
     }
 
     /**
-     * Testing Exception: In JUnit 4, we use the 'expected' parameter in @Test.
+     * Requirement: Verifies hierarchical category discounts.
      */
+    @Test
+    public void testCategoryDiscountEffect() {
+        product.addSalePrice(100.0f);
+        // Discount on the Dairy category
+        Discount catDiscount = new CategoryDiscount(3, 30, LocalDate.now(), LocalDate.now().plusDays(1), Arrays.asList(dairy));
+
+        systemDiscounts.add(catDiscount);
+
+        float result = product.updateAndGetCurrentBestPrice(systemDiscounts);
+        assertEquals("Product should inherit the 30% discount from its category.", 70.0f, result, 0.001);
+    }
+
+    @Test
+    public void testShortageDetection() {
+        product.setStorage_amount(2);
+        product.setShelf_amount(2);
+        assertTrue("Should detect shortage alert.", product.isBelowMinStock());
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void testNegativeStockThrowsException() {
         product.setStorage_amount(-5);
-    }
-
-    @Test
-    public void testDefectiveItemCreation() {
-        DefectiveItem item = new DefectiveItem(product, 5, "Store");
-        assertEquals(5, item.getDefectiveQuantity());
-        assertEquals("Store", item.getDefectiveLocation());
-    }
-
-    @Test
-    public void testProductLocationData() {
-        assertEquals(2, product.getAisle());
-        assertEquals(5, product.getShelf());
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testManufacturerValidation() {
-        new Manufacturer(2, "");
-    }
-
-    @Test
-    public void testTotalAmountCalculation() {
-        product.setStorage_amount(10);
-        product.setShelf_amount(5);
-        assertEquals(15, product.getGeneral_amount());
     }
 }

@@ -1,155 +1,126 @@
 package Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import Domain.*;
 
 /**
- * Service layer responsible for managing inventory operations.
- * It acts as the orchestrator between the Domain entities and the Presentation layer.
- * This class maintains rapid access maps for products, categories, and hierarchical relations.
+ * Service layer orchestrating inventory logic and data access.
+ * Manages product mapping, system-wide discounts, and automated reports with timestamps.
+ * Supports bulk operations for products and categories.
+ * @author Hadas
  */
 public class InventoryService {
-    // Fast lookup for products by their ID (SKU)
     private Map<Integer, Product> products;
-
-    // Fast lookup for categories by their ID
     private Map<Integer, Category> categories;
-
-    // Requirement: Map linking Category ID to a list of its associated Products [cite: 6]
-    private Map<Integer, List<Product>> categoryProductsMap;
-
-    // Tracking defective or expired items for reporting [cite: 9, 12]
     private List<DefectiveItem> defectiveItems;
+    private List<Discount> systemDiscounts;
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    /**
-     * Initializes the service with empty data structures.
-     */
     public InventoryService() {
         this.products = new HashMap<>();
         this.categories = new HashMap<>();
-        this.categoryProductsMap = new HashMap<>();
         this.defectiveItems = new ArrayList<>();
+        this.systemDiscounts = new ArrayList<>();
     }
 
-    // --- Data Management Methods ---
-
-    /**
-     * Adds a category to the system.
-     * @param c The Category object to be stored.
-     */
-    public void addCategory(Category c) {
-        if (c != null) {
-            categories.put(c.getId(), c);
-        }
+    public List<Category> getCategoriesByNames(List<String> names) {
+        return categories.values().stream()
+                .filter(c -> names.stream().anyMatch(name -> name.trim().equalsIgnoreCase(c.getName())))
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Adds a product and automatically updates the Category-Product mapping. [cite: 5, 6]
-     * @param p The Product object to be stored.
-     */
-    public void addProduct(Product p) {
-        if (p == null) return;
-        products.put(p.getId(), p);
-
-        Category[] cats = {p.getCategory(), p.getSub_category(), p.getSub_sub_category()};
-        for (Category cat : cats) {
-            if (cat != null) {
-                categoryProductsMap.putIfAbsent(cat.getId(), new ArrayList<>());
-                if (!categoryProductsMap.get(cat.getId()).contains(p)) {
-                    categoryProductsMap.get(cat.getId()).add(p);
-                }
-            }
-        }
+    public List<Product> getProductsBySkus(List<Integer> skus) {
+        return skus.stream()
+                .map(products::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Updates stock levels for a specific product and triggers automatic alerts if low. [cite: 1, 5]
-     * @param productId The ID of the product.
-     * @param warehouseQty Quantity in the back storage.
-     * @param shopQty Quantity on the store shelves.
-     */
-    public void updateProductStock(int productId, int warehouseQty, int shopQty) {
-        Product p = products.get(productId);
-        if (p != null) {
-            p.setStorage_amount(warehouseQty);
-            p.setShelf_amount(shopQty);
-
-            // Automatic stock alert check
-            p.checkStockStatus();
-        }
-    }
-
-    /**
-     * Records a defective item found in a specific location.
-     * @param item The DefectiveItem details.
-     */
-    public void addDefectiveItem(DefectiveItem item) {
-        if (item != null) {
-            this.defectiveItems.add(item);
-        }
-    }
-
-    // --- Reporting Methods ---
-
-    /**
-     * Generates a full inventory report grouped by categories.
-     * Requirement 11: Allows viewing items based on their categories.
-     */
     public void generateCategorizedReport(List<String> categoryNames) {
-        InventoryReport reporter = new InventoryReport();
-        Map<String, List<Product>> reportData = new HashMap<>();
-
-        if (categoryNames == null || categoryNames.isEmpty()) {
-            for (Map.Entry<Integer, List<Product>> entry : categoryProductsMap.entrySet()) {
-                Category cat = categories.get(entry.getKey());
-                if (cat != null) reportData.put(cat.getName(), entry.getValue());
-            }
-        } else {
-            for (String name : categoryNames) {
-                for (Category cat : categories.values()) {
-                    if (cat.getName().equalsIgnoreCase(name.trim())) {
-                        reportData.put(cat.getName(), categoryProductsMap.getOrDefault(cat.getId(), new ArrayList<>()));
-                    }
+        printReportHeader("CATEGORIZED INVENTORY REPORT");
+        for (String catName : categoryNames) {
+            boolean found = false;
+            String search = catName.trim();
+            System.out.println("\n>> CATEGORY: " + search.toUpperCase());
+            for (Product p : products.values()) {
+                if (isProductInCategory(p, search)) {
+                    p.updateAndGetCurrentBestPrice(systemDiscounts);
+                    System.out.println("   Product: " + p.getName());
+                    System.out.println("   SKU: " + p.getId());
+                    System.out.println("   Location: " + p.buildLocationDescription());
+                    System.out.println("   Current Stock: " + p.getGeneral_amount() + " | Sale Price: " + p.getCurrentSalePrice());
+                    System.out.println("   --------------------------------------");
+                    found = true;
                 }
             }
-        }
-
-        if (reportData.isEmpty()) {
-            System.out.println("No matching categories or products found.");
-        } else {
-            reporter.printReport(reportData);
+            if (!found) System.out.println("   (No products found for this category)");
         }
     }
 
-    /**
-     * Generates a report of all products currently below their minimum stock threshold.
-     */
     public void generateShortageReport() {
-        List<Product> shortages = new ArrayList<>();
+        printReportHeader("STOCK SHORTAGE REPORT");
+        boolean found = false;
         for (Product p : products.values()) {
-            if (p.getGeneral_amount() <= p.getMin_stock()) {
-                shortages.add(p);
+            if (p.isBelowMinStock()) {
+                System.out.println("!!! SHORTAGE ALERT: " + p.getName() + " (SKU: " + p.getId() + ")");
+                System.out.println("    Stock: " + p.getGeneral_amount() + " | Required Minimum: " + p.getMin_stock());
+                System.out.println("    Location: " + p.buildLocationDescription());
+                System.out.println("    --------------------------------------");
+                found = true;
             }
         }
-        ShortageReport reporter = new ShortageReport();
-        reporter.printReport(shortages);
+        if (!found) System.out.println("No items are currently below minimum stock levels.");
     }
 
-    /**
-     * Generates a report of items marked as defective or expired. [cite: 12]
-     */
     public void generateDefectiveReport() {
-        DefectiveReport reporter = new DefectiveReport();
-        reporter.printReport(new ArrayList<>(defectiveItems));
+        printReportHeader("PERIODIC DEFECTIVE ITEMS REPORT");
+        if (defectiveItems.isEmpty()) {
+            System.out.println("No defective or expired items reported.");
+            return;
+        }
+        for (DefectiveItem item : defectiveItems) {
+            Product p = item.getProduct();
+            System.out.println("   Product: " + p.getName() + " (SKU: " + p.getId() + ")");
+            System.out.println("   Quantity: " + item.getDefectiveQuantity());
+            String loc = item.getDefectiveLocation();
+            if (loc.equalsIgnoreCase("Store")) {
+                System.out.println("   Location: Store (Aisle: " + p.getAisle() + ", Shelf: " + p.getShelf() + ")");
+            } else {
+                System.out.println("   Location: " + loc);
+            }
+            System.out.println("   --------------------------------------");
+        }
     }
 
-    // --- Getters ---
+    private void printReportHeader(String title) {
+        System.out.println("\n==================================================");
+        System.out.println("REPORT: " + title);
+        System.out.println("DATE: " + LocalDateTime.now().format(dateFormatter));
+        System.out.println("==================================================");
+    }
 
-    /**
-     * Retrieves a product by its ID.
-     * @param id Product SKU/ID.
-     * @return The Product object or null if not found.
-     */
-    public Product getProduct(int id) {
-        return products.get(id);
+    private boolean isProductInCategory(Product p, String catName) {
+        return (p.getCategory() != null && p.getCategory().getName().equalsIgnoreCase(catName)) ||
+                (p.getSub_category() != null && p.getSub_category().getName().equalsIgnoreCase(catName)) ||
+                (p.getSub_sub_category() != null && p.getSub_sub_category().getName().equalsIgnoreCase(catName));
+    }
+
+    public void updateProductStock(int id, int w, int s) {
+        Product p = products.get(id);
+        if (p != null) { p.setStorage_amount(w); p.setShelf_amount(s); p.checkStockStatus(); }
+    }
+
+    public void addProduct(Product p) { products.put(p.getId(), p); }
+    public Product getProduct(int id) { return products.get(id); }
+    public void addCategory(Category c) { categories.put(c.getId(), c); }
+    public Category getCategory(int id) { return categories.get(id); }
+    public void createDiscount(Discount d) { systemDiscounts.add(d); }
+    public void addDefectiveItem(DefectiveItem item) { defectiveItems.add(item); }
+    public void addSupplierPrice(int pId, int sId, float price) {
+        Product p = products.get(pId);
+        if (p != null) p.addPurchasePrice(sId, price);
     }
 }

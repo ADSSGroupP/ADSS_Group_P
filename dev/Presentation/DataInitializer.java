@@ -1,46 +1,67 @@
 package Presentation;
 
 import Service.InventoryService;
+import Domain.*;
 
 /**
- * Utility class to seed the system with initial sample data.
- * This ensures the system is functional upon startup for demonstration purposes.
+ * Enhanced utility class to seed the system with broad sample data for testing.
  */
 public class DataInitializer {
 
-    /**
-     * Seeds the inventory service with categories, manufacturers, and products.
-     * @param service The InventoryService instance to populate.
-     */
     public static void seedData(InventoryService service) {
-        // 1. Create Sample Manufacturer
+        // 1. Manufacturers
         Manufacturer tnuva = new Manufacturer(1, "Tnuva");
+        Manufacturer osem = new Manufacturer(2, "Osem");
+        Manufacturer strauss = new Manufacturer(3, "Strauss");
 
-        // 2. Create Category Hierarchy (Dairy -> Milk)
+        // 2. Category Hierarchy: Dairy -> Milk -> Fresh Milk
         Category dairy = new Category(1, "Dairy");
-        Category milkCategory = new Category(11, "Milk");
-        milkCategory.setParentCategory(dairy);
+        Category milk = new Category(11, "Milk");
+        Category freshMilk = new Category(111, "Fresh Milk");
 
-        // 3. Register categories in service
-        service.addCategory(dairy);
-        service.addCategory(milkCategory);
+        milk.setParentCategory(dairy);
+        freshMilk.setParentCategory(milk);
 
-        // 4. Create and add a Product
-        // SKU: 101, Min Stock: 10, Aisle: 5, Shelf: 2
-        Product milk = new Product(101, "Milk 3% 1L", tnuva, 10, 5, 2);
+        // Category Hierarchy: Cleaning -> Kitchen -> Soaps
+        Category cleaning = new Category(2, "Cleaning");
+        Category kitchen = new Category(22, "Kitchen");
+        Category soaps = new Category(222, "Soaps");
 
-        // Set hierarchy and initial stock
-        milk.setCategory(dairy);
-        milk.setSub_category(milkCategory);
-        milk.setStorage_amount(50); // Quantity in warehouse
-        milk.setShelf_amount(5);    // Quantity in store shelves
+        kitchen.setParentCategory(cleaning);
+        soaps.setParentCategory(kitchen);
 
-        // Add initial sale price
-        milk.addSalePrice(6.50f);
+        // Register categories in service
+        service.addCategory(dairy); service.addCategory(milk); service.addCategory(freshMilk);
+        service.addCategory(cleaning); service.addCategory(kitchen); service.addCategory(soaps);
 
-        // 5. Add product to the system
-        service.addProduct(milk);
+        // 3. Products
+        // Product 1: Milk 3% (Under Dairy -> Milk -> Fresh Milk)
+        Product milk3 = new Product(101, "Milk 3% Tnuva", tnuva, 10, 5, 2);
+        milk3.setCategory(dairy);
+        milk3.setSub_category(milk);
+        milk3.setSub_sub_category(freshMilk);
+        milk3.setStorage_amount(50);
+        milk3.setShelf_amount(5);
+        milk3.addSalePrice(6.50f); // Base Price
+        service.addProduct(milk3);
 
-        System.out.println("[System] Initial data loaded: " + milk.getName() + " added to inventory.");
+        // Product 2: Bamba (No sub-categories)
+        Product bamba = new Product(102, "Bamba Large", osem, 20, 3, 1);
+        bamba.setStorage_amount(100);
+        bamba.setShelf_amount(30);
+        bamba.addSalePrice(4.00f); // Base Price
+        service.addProduct(bamba);
+
+        // Product 3: Dish Soap (Under Cleaning -> Kitchen -> Soaps)
+        Product soap = new Product(103, "Dish Soap 1L", strauss, 5, 8, 4);
+        soap.setCategory(cleaning);
+        soap.setSub_category(kitchen);
+        soap.setSub_sub_category(soaps);
+        soap.setStorage_amount(15);
+        soap.setShelf_amount(2);
+        soap.addSalePrice(12.00f); // Base Price
+        service.addProduct(soap);
+
+        System.out.println("[System] Broad data seeded successfully.");
     }
 }

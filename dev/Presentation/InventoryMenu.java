@@ -1,13 +1,15 @@
 package Presentation;
 
 import Service.InventoryService;
-import Domain.DefectiveItem;
-import Domain.Product;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
+import Domain.*;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * Command Line Interface for the Super-Li Inventory Management System.
+ * Enhanced with detailed feedback for bulk discount operations.
+ */
 public class InventoryMenu {
     private final InventoryService service;
     private final Scanner scanner;
@@ -20,92 +22,148 @@ public class InventoryMenu {
     public void start() {
         boolean running = true;
         while (running) {
-            System.out.println("\n===== SUPER-LI INVENTORY MANAGEMENT =====");
+            System.out.println("\n===== SUPER-LI INVENTORY MANAGEMENT SYSTEM =====");
             System.out.println("1. Reports Menu");
-            System.out.println("2. Update Stock (Warehouse & Shop Shelves)");
+            System.out.println("2. Update Stock Levels (Warehouse & Store)");
             System.out.println("3. Log Defective or Expired Item");
-            System.out.println("4. Exit System");
-            System.out.print("Select an option: ");
+            System.out.println("4. Manage Supplier Pricing");
+            System.out.println("5. Create Bulk Discount (Products or Categories)");
+            System.out.println("6. Exit System");
+            System.out.print("Please select an option: ");
 
             String choice = scanner.nextLine();
             switch (choice) {
                 case "1": showReportsSubMenu(); break;
                 case "2": handleStockUpdate(); break;
                 case "3": handleDefectiveLog(); break;
-                case "4": running = false; break;
-                default: System.out.println("Invalid selection.");
+                case "4": handleAddSupplierPrice(); break;
+                case "5": handleCreateDiscount(); break;
+                case "6": running = false; break;
+                default: System.out.println("Invalid selection. Try again.");
             }
         }
     }
 
     private void showReportsSubMenu() {
-        System.out.println("\n--- Reports Menu ---");
-        System.out.println("1. Inventory Report (Filter by Categories)");
-        System.out.println("2. Shortage Alert Report (Items below minimum)");
+        System.out.println("\n--- REPORTS MENU ---");
+        System.out.println("1. Periodic Categorized Inventory Report");
+        System.out.println("2. Stock Shortage Alert Report");
         System.out.println("3. Periodic Defective Items Report");
-        System.out.print("Choose report type: ");
+        System.out.print("Selection: ");
 
         String reportChoice = scanner.nextLine();
-
-        if (reportChoice.equals("1")) {
-            // תיקון: לבקש מהעובד שמות של קטגוריות (דרישה 11)
-            System.out.println("Enter category names separated by commas (e.g., 'Dairy, Meat')");
-            System.out.println("Or press ENTER to see ALL items:");
-            String input = scanner.nextLine();
-
-            List<String> categories = new ArrayList<>();
-            if (!input.trim().isEmpty()) {
-                categories = Arrays.asList(input.split(","));
-            }
-            service.generateCategorizedReport(categories); // שים לב: צריך לעדכן גם ב-Service שיקבל רשימה
-
-        } else if (reportChoice.equals("2")) {
-            service.generateShortageReport();
-        } else if (reportChoice.equals("3")) {
-            service.generateDefectiveReport();
+        switch (reportChoice) {
+            case "1":
+                System.out.print("Enter category names to include : ");
+                String input = scanner.nextLine();
+                List<String> names = Arrays.asList(input.split("\\s*,\\s*"));
+                service.generateCategorizedReport(names);
+                break;
+            case "2": service.generateShortageReport(); break;
+            case "3": service.generateDefectiveReport(); break;
+            default: System.out.println("Returning to main menu...");
         }
     }
 
-    private void handleDefectiveLog() {
+    /**
+     * Requirement: Bulk discount creation with feedback on missing items.
+     */
+    private void handleCreateDiscount() {
         try {
-            System.out.println("\n--- Log Defective Item ---");
-            System.out.print("Enter Product SKU: ");
-            int id = Integer.parseInt(scanner.nextLine());
+            System.out.print("Discount Percentage : ");
+            float pct = Float.parseFloat(scanner.nextLine());
+            System.out.print("Start Date (YYYY-MM-DD): ");
+            LocalDate start = LocalDate.parse(scanner.nextLine());
+            System.out.print("End Date (YYYY-MM-DD): ");
+            LocalDate end = LocalDate.parse(scanner.nextLine());
 
-            Product p = service.getProduct(id);
-            if (p == null) {
-                System.out.println("Product not found.");
-                return;
+            System.out.println("Apply discount to:");
+            System.out.println("1) List of Product SKUs");
+            System.out.println("2) List of Category Names");
+            System.out.print("Choice: ");
+            String target = scanner.nextLine();
+
+            if (target.equals("1")) {
+                System.out.print("Enter SKUs (separated by commas): ");
+                String input = scanner.nextLine();
+                List<Integer> requestedSkus = Arrays.stream(input.split(","))
+                        .map(String::trim).map(Integer::parseInt).collect(Collectors.toList());
+
+                List<Product> foundProducts = service.getProductsBySkus(requestedSkus);
+
+                if (!foundProducts.isEmpty()) {
+                    service.createDiscount(new ProductDiscount(new Random().nextInt(1000), pct, start, end, foundProducts));
+                    System.out.println("SUCCESS: Discount applied to: " +
+                            foundProducts.stream().map(Product::getName).collect(Collectors.joining(", ")));
+                }
+
+                // Identify missing SKUs
+                List<Integer> foundIds = foundProducts.stream().map(Product::getId).collect(Collectors.toList());
+                List<Integer> missing = requestedSkus.stream().filter(id -> !foundIds.contains(id)).collect(Collectors.toList());
+                if (!missing.isEmpty()) {
+                    System.out.println("WARNING: The following SKUs were NOT found and skipped: " + missing);
+                }
+
+            } else {
+                System.out.print("Enter Category Names (separated by commas): ");
+                String input = scanner.nextLine();
+                List<String> requestedNames = Arrays.stream(input.split(",")).map(String::trim).collect(Collectors.toList());
+
+                List<Category> foundCategories = service.getCategoriesByNames(requestedNames);
+
+                if (!foundCategories.isEmpty()) {
+                    service.createDiscount(new CategoryDiscount(new Random().nextInt(1000), pct, start, end, foundCategories));
+                    System.out.println("SUCCESS: Discount applied to categories: " +
+                            foundCategories.stream().map(Category::getName).collect(Collectors.joining(", ")));
+                }
+
+                // Identify missing names
+                List<String> foundNames = foundCategories.stream().map(c -> c.getName().toLowerCase()).collect(Collectors.toList());
+                List<String> missing = requestedNames.stream()
+                        .filter(name -> !foundNames.contains(name.toLowerCase()))
+                        .collect(Collectors.toList());
+                if (!missing.isEmpty()) {
+                    System.out.println("WARNING: The following categories were NOT found and skipped: " + missing);
+                }
             }
-
-            System.out.print("Enter Quantity Found Defective: ");
-            int qty = Integer.parseInt(scanner.nextLine());
-
-            // תיקון: לבקש מיקום ספציפי (חנות/מחסן) לפי הפורום
-            System.out.print("Where was it found? (Store / Storage): ");
-            String loc = scanner.nextLine();
-
-            DefectiveItem item = new DefectiveItem(p, qty, loc);
-            service.addDefectiveItem(item);
-            System.out.println("Defective item recorded.");
-        } catch (Exception e) {
-            System.out.println("Error: Invalid input.");
-        }
+        } catch (Exception e) { System.out.println("Invalid input format. Discount not created."); }
     }
 
     private void handleStockUpdate() {
         try {
-            System.out.print("Enter SKU: ");
+            System.out.print("Enter Product SKU: ");
             int id = Integer.parseInt(scanner.nextLine());
-            System.out.print("Warehouse Qty: ");
-            int storage = Integer.parseInt(scanner.nextLine());
-            System.out.print("Shop Shelves Qty: ");
-            int shelf = Integer.parseInt(scanner.nextLine());
+            System.out.print("Warehouse Amount: ");
+            int w = Integer.parseInt(scanner.nextLine());
+            System.out.print("Store Shelf Amount: ");
+            int s = Integer.parseInt(scanner.nextLine());
+            service.updateProductStock(id, w, s);
+            System.out.println("Stock updated successfully.");
+        } catch (Exception e) { System.out.println("Error: Use numbers only."); }
+    }
 
-            service.updateProductStock(id, storage, shelf);
-            System.out.println("Stock updated.");
-        } catch (Exception e) {
-            System.out.println("Invalid numeric input.");
-        }
+    private void handleDefectiveLog() {
+        try {
+            System.out.print("Enter Product SKU: ");
+            Product p = service.getProduct(Integer.parseInt(scanner.nextLine()));
+            if (p != null) {
+                System.out.print("Quantity Defective: ");
+                int q = Integer.parseInt(scanner.nextLine());
+                System.out.print("Location (Store/Storage): ");
+                String l = scanner.nextLine();
+                service.addDefectiveItem(new DefectiveItem(p, q, l));
+                System.out.println("Defect recorded.");
+            } else { System.out.println("Product not found."); }
+        } catch (Exception e) { System.out.println("Error logging defect."); }
+    }
+
+    private void handleAddSupplierPrice() {
+        try {
+            System.out.print("SKU: "); int sku = Integer.parseInt(scanner.nextLine());
+            System.out.print("Supplier ID: "); int sid = Integer.parseInt(scanner.nextLine());
+            System.out.print("Unit Cost: "); float pr = Float.parseFloat(scanner.nextLine());
+            service.addSupplierPrice(sku, sid, pr);
+            System.out.println("Supplier price updated.");
+        } catch (Exception e) { System.out.println("Error."); }
     }
 }
