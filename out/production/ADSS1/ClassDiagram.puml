@@ -1,0 +1,115 @@
+מאה אחוז, אני לא נוגע במבנה או בקשרים הקיימים. אני רק "מזריק" פנימה את השדות והמתודות החדשות שהוספנו לקוד כדי שהתרשים יהיה שיקוף מושלם שלו, כפי שביקשת.
+
+הנה הקוד המעודכן ל-PlantUML:
+
+קטע קוד
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "Presentation Layer" #LightBlue {
+    class UserInterface {
+        - EmployeeService employeeService
+        - ShiftService shiftService
+        - Scanner scanner
+        + void start()
+        - void manageEmployees()
+        - void manageShifts()
+        - void shiftAssignmentUI()
+    }
+}
+
+package "Service Layer" #Lavender {
+    class EmployeeService {
+        - PersonnelManager manager
+        - LocalDateTime constraintDeadline
+        + void addEmployee(Employee e)
+        + String insertConstraint(int id, Constraint c)
+        + Employee getEmployeeById(int id)
+        + List<Employee> getFiredEmployees()
+        + void fireEmployee(int id)
+    }
+
+    class ShiftService {
+        - EmployeeService empService
+        - List<Shift> shifts
+        + String assignEmployeeToShift(int id, LocalDate date, char type, String role, int extra)
+        + String assignExceptionalShift(int id, LocalDate date, char type, String role)
+        + void createShift(LocalDate date, char type, Employee manager, Map<String, Integer> model)
+        + boolean canWorkDoubleShift(int id, LocalDate date)
+    }
+}
+
+package "Domain Layer" #LightGreen {
+    class PersonnelManager {
+        - List<Employee> employees
+        - List<Employee> firedEmployees
+        + void addEmployee(Employee e)
+        + void fireEmployee(int id)
+        + Employee getEmployeeById(int id)
+    }
+
+    class Employee {
+        - String name
+        - int id
+        - String[] roles
+        - int bankAccount
+        - int branch
+        - int snp
+        - DayOfWeek dayOff
+        - LocalDate startDate
+        - JobTerms jobTerms
+        - List<Constraint> constraints
+        + void addConstraint(Constraint c)
+        + boolean hasRole(String role)
+    }
+
+    class JobTerms {
+        - String termsName
+        - double salary
+        - double hourlyWage
+        + double getSalary()
+        + double getHourlyWage()
+    }
+
+    class Shift {
+        - LocalDate date
+        - char type
+        - Employee manager
+        - Map<String, Integer> requiredRoles
+        - Map<String, Employee> shift_roles
+        - Map<Employee, Integer> extra_hours_assignments
+        + boolean isFullyStaffed()
+        + boolean isEmployeeAssigned(int employeeId)
+    }
+
+    class Constraint {
+        - int employeeId
+        - LocalDate date
+        - LocalTime startTime
+        - LocalTime endTime
+        - boolean isFlexible
+        - int extraHours
+        - boolean isHardConstraint
+        - boolean doubleShift
+        + boolean blocksMorningShift()
+        + boolean blocksEveningShift()
+        + boolean isDoubleShiftApproved()
+    }
+}
+
+' Relations (Keeping your structure exactly as it was)
+UserInterface --> EmployeeService : uses
+UserInterface --> ShiftService : uses
+
+EmployeeService *-- PersonnelManager : "contains 1"
+ShiftService o-- EmployeeService : "uses for validation"
+
+PersonnelManager "1" o-- "0..*" Employee : "manages (active/fired)"
+Employee "1" *-- "1" JobTerms : "has"
+Employee "1" *-- "0..*" Constraint : "has"
+
+Shift "1" --> "1" Employee : "managed by"
+Shift "1" --> "0..*" Employee : "staffed with"
+
+@enduml
