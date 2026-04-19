@@ -9,7 +9,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d6066ec6-d1b5-4998-877a-a10a89b2d041" name="Changes" comment="" />
+    <list default="true" id="d6066ec6-d1b5-4998-877a-a10a89b2d041" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/out/DomainLayer/Constraint.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/DomainLayer/Employee.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/DomainLayer/JobTerms.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/DomainLayer/Shift.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/PresentationLayer/Main.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/PresentationLayer/UserInterface.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/ServiceLayer/DataInitializer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/ServiceLayer/EmployeeService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/ServiceLayer/ShiftService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/test/ADSS1/HRSystemTest.class" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
