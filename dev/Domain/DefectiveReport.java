@@ -2,8 +2,17 @@ package Domain;
 
 import java.util.List;
 
+/**
+ * Represents a specialized report for listing defective and expired items in the system.
+ * Inherits the core reporting functionality from the Report class.
+ */
 public class DefectiveReport extends Report {
 
+    /**
+     * Generates and prints the report to the console based on a list of defective items.
+     * * @param defectiveItems The list of {@link DefectiveItem} objects to be displayed.
+     * If the list is empty, a specific "no items" message is printed.
+     */
     public void printReport(List<DefectiveItem> defectiveItems) {
         printHeader("DEFECTIVE & EXPIRED ITEMS REPORT");
 
