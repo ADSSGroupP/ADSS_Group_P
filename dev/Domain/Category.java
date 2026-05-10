@@ -10,6 +10,7 @@ import java.util.List;
  */
 public class Category {
     // --- Fields ---
+    private static int idCounter = 1;
     private int id;                         // Unique ID for the category
     private String name;                    // Category name (e.g., "Dairy", "Milk")
     private Category parentCategory;        // Reference to the parent (null if top-level)
@@ -94,5 +95,9 @@ public class Category {
     @Override
     public String toString() {
         return this.name;
+    }
+
+    public static int getNextId() {
+        return idCounter++;
     }
 }

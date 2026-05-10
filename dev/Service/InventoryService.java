@@ -140,4 +140,20 @@ public class InventoryService {
         Product p = products.get(pId);
         if (p != null) p.addPurchasePrice(sId, price);
     }
+
+    // תוסיפי את אלו למחלקה InventoryService
+
+    /**
+     * Checks if a product exists by ID to prevent duplicates.
+     */
+    public boolean productExists(int id) {
+        return products.containsKey(id);
+    }
+
+    /**
+     * Checks if a category exists by ID.
+     */
+    public boolean categoryExists(int id) {
+        return categories.containsKey(id);
+    }
 }

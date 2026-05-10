@@ -3,7 +3,7 @@ package Presentation;
 import Service.InventoryService;
 
 /**
- * Main class to launch the Inventory module.
+ * Main class to launch the Inventory module.5
  */
 public class Main {
     public static void main(String[] args) {
