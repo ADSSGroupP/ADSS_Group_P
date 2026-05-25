@@ -3,6 +3,8 @@ package ServiceLayer;
 import java.util.ArrayList;
 import java.util.List;
 import DomainLayer.*;
+import Transportation.TransportationMock;
+
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 
@@ -97,5 +99,13 @@ public class EmployeeService {
 
     public List<Employee> getFiredEmployees() {
         return new ArrayList<>(firedEmployees);
+    }
+
+    public boolean checkLicence(int empID){
+        Employee emp = getEmployeeById(empID);
+        if (emp.getLicense().equals(TransportationMock.getRequiredLicenseForTransport(TransportationMock.getTransportId()))){
+            return true;
+        }
+        return false;
     }
 }

@@ -2,6 +2,8 @@ package PresentationLayer;
 
 import ServiceLayer.*;
 import DomainLayer.*;
+import Transportation.TransportationMock;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +21,8 @@ public class UserInterface {
     private Scanner scanner;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    private int currentBranchId;
+
     public UserInterface(EmployeeService empService, ShiftService shiftService) {
         this.employeeService = empService;
         this.shiftService = shiftService;
@@ -30,8 +34,16 @@ public class UserInterface {
      * Handles the top-level routing between Manager, Employee, and Exit options.
      */
     public void start() {
+        System.out.println("--- Welcome to Super-Lee HR System ---");
+        System.out.print("Please enter Branch ID to operate: ");
+        try {
+            this.currentBranchId = Integer.parseInt(scanner.nextLine());
+        } catch (Exception e) {
+            System.out.println("Invalid Branch ID. Defaulting to 1.");
+            this.currentBranchId = 1;
+        }
         while (true) {
-            System.out.println("\n--- Super-Lee HR System ---");
+            System.out.println("\n--- Branch: " + currentBranchId + " ---");
             System.out.println("1. Login as Personnel Manager");
             System.out.println("2. Login as Employee");
             System.out.println("3. Exit");
@@ -140,8 +152,17 @@ public class UserInterface {
             String name = scanner.nextLine();
             System.out.print("ID: ");
             int id = Integer.parseInt(scanner.nextLine());
-            System.out.print("Roles (comma separated): ");
-            String[] roles = scanner.nextLine().split(",");
+            System.out.print("Roles (comma separated, e.g. CASHIER, DRIVER): ");
+            String[] rolesInput = scanner.nextLine().split(",");
+            Role[] roles = new Role[rolesInput.length];
+            try {
+                for (int i = 0; i < rolesInput.length; i++) {
+                    roles[i] = Role.valueOf(rolesInput[i].trim().toUpperCase());
+                }
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: One of the roles you entered is not recognized. (Check your spelling!)");
+                return;
+            }
             System.out.print("Bank Number: ");
             int bankNum = Integer.parseInt(scanner.nextLine());
             System.out.print("Branch Number: ");
@@ -160,8 +181,18 @@ public class UserInterface {
             System.out.print("Hourly Wage: ");
             double hourly = Double.parseDouble(scanner.nextLine());
 
+            String license="";
+            for (Role r : roles) {
+                if (r == Role.DRIVER) {
+                    System.out.print("Enter driver license type: ");
+                    license = scanner.nextLine();
+                    break;
+                }
+            }
 
-            Employee newEmp = new Employee(name, id, roles, bankNum, branchNum, accNum, dayOff, LocalDate.now(), jobScope, global, hourly);
+
+
+            Employee newEmp = new Employee(name, id, roles, bankNum, branchNum, accNum, dayOff, LocalDate.now(), jobScope, global, hourly,license,this.currentBranchId);
 
             employeeService.addEmployee(newEmp);
             System.out.println("Employee added successfully.");
@@ -186,33 +217,68 @@ public class UserInterface {
     // --- 3. Create Shift UI ---
     private void createShiftUI() {
         try {
-            System.out.print("Date: ");
+            System.out.println("\n--- Create New Shift ---");
+            System.out.print("Date (dd/MM/yyyy): ");
             LocalDate d = LocalDate.parse(scanner.nextLine(), dateFormatter);
-            System.out.print("Type: ");
-            char t = scanner.nextLine().charAt(0);
+            System.out.print("Type (m/e): ");
+            char t = scanner.nextLine().toLowerCase().charAt(0);
             System.out.print("Manager ID: ");
             int mId = Integer.parseInt(scanner.nextLine());
             Employee mgr = employeeService.getEmployeeById(mId);
 
-            Map<String, Integer> model = new HashMap<>();
-            System.out.println("Define model (role:amount), type 'done' to finish:");
-            while (true) {
-                System.out.print("Role: ");
-                String r = scanner.nextLine();
-                if (r.equals("done")) break;
-                System.out.print("Amount: ");
-                int a = Integer.parseInt(scanner.nextLine());
-                model.put(r, a);
+            if (mgr == null) {
+                System.out.println("Error: Manager not found.");
+                return;
             }
-            shiftService.createShift(d, t, mgr, model);
-            System.out.println("Shift created.");
-        } catch (Exception e) {
-            System.out.println("Error.");
+
+            if (shiftService.mustHaveStoreKeeper(d, t)) {
+                int num = shiftService.numOfDriversPairShift(d, t);
+                if (num == 1) {
+                    System.out.print("There is" + num + "transportation during this shift, assign at least one store keeper and " + num + "driver");
+                } else {
+                    System.out.print("There are" + num + "transportations during this shift, assign at least one store keeper and " + num + "drivers");
+                }
+            }
+            System.out.print("Use default staffing requirements (2 Cashiers, 2 Storekeepers)? (y/n): ");
+            String useDefault = scanner.nextLine().toLowerCase();
+
+            if (useDefault.equals("y")) {
+                shiftService.createDefaultShift(d, t, mgr, this.currentBranchId);
+                System.out.println("Shift created for branch " + currentBranchId);
+            } else {
+                Map<Role, Integer> customModel = new HashMap<>();
+                System.out.println("Enter roles and amounts (type 'done' to finish):");
+                while (true) {
+                    System.out.print("Role Name: ");
+                    String roleName = scanner.nextLine();
+                    if (roleName.equalsIgnoreCase("done")) break;
+                    try {
+                        Role roleEnum = Role.valueOf(roleName.trim().toUpperCase());
+
+                        System.out.print("Amount needed: ");
+                        int amount = Integer.parseInt(scanner.nextLine());
+
+                        customModel.put(roleEnum, amount);
+                        shiftService.createCustomShift(d, t, mgr, customModel, this.currentBranchId);
+                    } catch (IllegalArgumentException e) {
+                        if (e instanceof NumberFormatException) {
+                            System.out.println("Error: Please enter a valid whole number for the amount.");
+                        } else {
+                            System.out.println("Error: Role '" + roleName + "' is not recognized. (Use: CASHIER, DRIVER, etc.)");
+                        }
+                    }
+                }
+            }
+        }catch (Exception e) {
+            System.out.println("Error in shift creation process: " + e.getMessage());
         }
     }
+
     // --- 4. Shift assignment ---
     private void shiftAssignmentUI() {
         try {
+            boolean hasStoreKeeper=false;
+            int countDrivers=0;
             System.out.println("\n--- Full Shift Scheduling ---");
             System.out.print("Enter Date (dd/MM/yyyy): ");
             LocalDate date = LocalDate.parse(scanner.nextLine(), dateFormatter);
@@ -236,16 +302,25 @@ public class UserInterface {
                 System.out.println("ID: " + e.getId() + " | Name: " + e.getName() + " | Roles: " + Arrays.toString(e.getRoles()));
             }
 
-            Map<String, Integer> model = shift.getShift_model();
+            Map<Role, Integer> model = shift.getShift_model();
             System.out.println("\n--- Starting Assignment for " + model.size() + " Roles ---");
 
-            for (String roleName : model.keySet()) {
+            for (Role roleName : model.keySet()) {
                 int requiredAmount = model.get(roleName);
                 System.out.println("\n>> Role: [" + roleName + "] | Needs: " + requiredAmount + " employees.");
 
                 for (int i = 1; i <= requiredAmount; i++) {
                     System.out.print("   Enter ID for employee #" + i + " to be a " + roleName + ": ");
                     int empId = Integer.parseInt(scanner.nextLine());
+
+                    if (roleName == Role.SHIFTMANAGER) {
+                        Employee potentialMgr = employeeService.getEmployeeById(empId);
+                        if (potentialMgr == null || !Arrays.asList(potentialMgr.getRoles()).contains(Role.SHIFTMANAGER)) {
+                            System.out.println("   Validation Error: Employee ID " + empId + " is not certified as a Shift Manager.");
+                            i--;
+                            continue;
+                        }
+                    }
 
                     int extraHoursToAssign = 0;
                     if (type == 'm') {
@@ -254,6 +329,16 @@ public class UserInterface {
                             extraHoursToAssign = Integer.parseInt(scanner.nextLine());
                         } catch (NumberFormatException e) {
                             extraHoursToAssign = 0;
+                        }
+                    }
+
+                    if(roleName == Role.STOREKEEPER){
+                        hasStoreKeeper=true;
+                    }
+                    if(roleName == Role.DRIVER){
+                        countDrivers++;
+                        if(!employeeService.checkLicence(empId)){
+                            throw new Exception("Validation Error: Drivers license is not matched to the license required.");
                         }
                     }
 
@@ -268,9 +353,14 @@ public class UserInterface {
                     }
                 }
             }
-
+            if(shiftService.mustHaveStoreKeeper(date,type)&&!hasStoreKeeper){
+                throw new Exception("Validation Error: Shift must have a storekeeper due to transportation constraints.");
+            }
             System.out.println("\n--- Scheduling Completed for this Shift ---");
+            if (countDrivers<(shiftService.numOfDriversPairShift(date,type))){
+                throw new Exception("Validation Error: Shift must have" + shiftService.numOfDriversPairShift(date,type)+ "drivers.");
 
+            }
         } catch (Exception e) {
             System.out.println("Error in process: " + e.getMessage());
         }
@@ -335,10 +425,17 @@ public class UserInterface {
             char type = scanner.nextLine().toLowerCase().charAt(0);
             System.out.print("Enter Employee ID: ");
             int id = Integer.parseInt(scanner.nextLine());
-            System.out.print("Enter Role: ");
-            String role = scanner.nextLine();
+            System.out.print("Enter Role(CASHIER, DRIVER, etc.): ");
+            String roleInput = scanner.nextLine().trim().toUpperCase();
+            Role roleEnum;
+            try {
+                roleEnum = Role.valueOf(roleInput);
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: Role '" + roleInput + "' is not recognized.");
+                return;
+            }
 
-            String result = shiftService.assignExceptionalShift(id, date, type, role);
+            String result = shiftService.assignExceptionalShift(id, date, type, roleEnum);
             System.out.println("Result: " + result);
         } catch (Exception e) {
             System.out.println("Error: Invalid input.");
@@ -375,23 +472,27 @@ public class UserInterface {
 
     // --- 6.1 Certify Shift Manager ---
     private void certifyShiftManagerUI() {
-        System.out.print("Enter Employee ID to promote: ");
-        int id = Integer.parseInt(scanner.nextLine());
-        Employee emp = employeeService.getEmployeeById(id);
+        try {
+            System.out.print("Enter Employee ID to promote: ");
+            int id = Integer.parseInt(scanner.nextLine());
+            Employee emp = employeeService.getEmployeeById(id);
 
-        if (emp == null) {
-            System.out.println("Employee not found.");
-            return;
-        }
+            if (emp == null) {
+                System.out.println("Employee not found.");
+                return;
+            }
 
-        // Manual update since Service doesn't have the method
-        List<String> rolesList = new ArrayList<>(Arrays.asList(emp.getRoles()));
-        if (!rolesList.contains("Shift Manager")) {
-            rolesList.add("Shift Manager");
-            emp.setRoles(rolesList.toArray(new String[0])); // Assumes setRoles exists in Employee
-            System.out.println(emp.getName() + " is now a Shift Manager.");
-        } else {
-            System.out.println("Employee is already a Shift Manager.");
+            // Manual update since Service doesn't have the method
+            List<Role> rolesList = new ArrayList<>(Arrays.asList(emp.getRoles()));
+            if (!rolesList.contains(Role.SHIFTMANAGER)) {
+                rolesList.add(Role.SHIFTMANAGER);
+                emp.setRoles(rolesList.toArray(new Role[0])); // Assumes setRoles exists in Employee
+                System.out.println(emp.getName() + " is now a Shift Manager.");
+            } else {
+                System.out.println("Employee is already a Shift Manager.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error.");
         }
     }
 
@@ -409,13 +510,18 @@ public class UserInterface {
                 return;
             }
 
-            System.out.print("Enter role to change: ");
-            String role = scanner.nextLine();
-            System.out.print("Enter new required amount: ");
-            int amount = Integer.parseInt(scanner.nextLine());
-
-            shift.getShift_model().put(role, amount);
-            System.out.println("Template updated.");
+            System.out.print("Enter role to change (CASHIER, DRIVER...): ");
+            String roleInput = scanner.nextLine().trim().toUpperCase();
+            Role roleEnum;
+            try {
+                roleEnum = Role.valueOf(roleInput);
+                System.out.print("Enter new required amount: ");
+                int amount = Integer.parseInt(scanner.nextLine());
+                shift.getStaffingRequirement().setRequirement(roleEnum, amount);
+                System.out.println("Template updated.");
+            } catch (IllegalArgumentException e) {
+                System.out.println("Error: Role '" + roleInput + "' is not valid.");
+            }
         } catch (Exception e) {
             System.out.println("Error updating template.");
         }
@@ -571,12 +677,12 @@ public class UserInterface {
             System.out.println("    Shift Manager: Not assigned");
         }
 
-        Map<Employee, String> assignments = shift.getShift_roles();
+        Map<Employee, Role> assignments = shift.getShift_roles();
         if (assignments == null || assignments.isEmpty()) {
             System.out.println("    Assignments: No employees assigned yet.");
         } else {
             System.out.println("    Assignments:");
-            for (Map.Entry<Employee, String> entry : assignments.entrySet()) {
+            for (Map.Entry<Employee, Role> entry : assignments.entrySet()) {
                 System.out.println("      - " + entry.getValue() + ": " + entry.getKey().getName());
             }
         }

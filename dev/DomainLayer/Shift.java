@@ -13,23 +13,24 @@ public class Shift {
     LocalDate date;
     private char type; // "m" (morning) or "e" (evening)
     private Employee shift_manager;
-    private Map<String,Integer> shift_model; //Stores the required staffing levels for the shift.
-    private Map<Employee,String> shift_roles; //Stores the actual assignments made for this shift.
-    private Map<Employee, Integer> extra_hours_assignments = new HashMap<>(); // map to store extra hours specifically
 
+    private StaffingRequirement staffingRequirement;
+    private ShiftAssignment shiftAssignment;
+
+    private Map<Employee, Integer> extra_hours_assignments = new HashMap<>(); // map to store extra hours specifically
+    private int branch_id;
 
 
     //constructor
-    public Shift (LocalDate date, char type, Employee shift_manager, Map<String,Integer> shift_model){
+    public Shift (LocalDate date, char type, Employee shift_manager,int branch_id){
         this.date=date;
         this.type=type;
         this.shift_manager = shift_manager;
-        this.shift_roles = new HashMap<>();
-        this.shift_model = new HashMap<>();
-
-        this.shift_model.put("Cashir",2); //default value
-        this.shift_model.put("storeKeeper",2); //default value
+        this.staffingRequirement = new StaffingRequirement();
+        this.shiftAssignment = new ShiftAssignment();
+        this.branch_id=branch_id;
     }
+
 
     /**
      * Generates a string representation of the shift, including the manager
@@ -38,23 +39,52 @@ public class Shift {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Shift Date: %s | Type: %s\n", date, (type == 'm' ? "Morning" : "Evening")));
+        sb.append(String.format("=== Shift Details ===\n"));
+        sb.append(String.format("Date: %s | Type: %s | Branch ID: %d\n",
+                date, (type == 'm' ? "Morning" : "Evening"), branch_id));
         sb.append(String.format("Manager: %s\n", (shift_manager != null ? shift_manager.getName() : "None")));
+
         sb.append("Assignments: ");
-        if (shift_roles.isEmpty()) {
+        Map<Employee, Role> roles = shiftAssignment.getAssignments();
+        if (roles.isEmpty()) {
             sb.append("No assignments yet.");
         } else {
-            shift_roles.forEach((emp, role) -> {
+            roles.forEach((emp, role) -> {
                 sb.append(String.format("[%s: %s] ", role, emp.getName()));
             });
         }
+
+        if (!extra_hours_assignments.isEmpty()) {
+            sb.append("\nExtra Hours: ");
+            extra_hours_assignments.forEach((emp, hours) -> {
+                sb.append(String.format("[%s: +%d hrs] ", emp.getName(), hours));
+            });
+        }
+
         return sb.toString();
     }
 
-    public void setShift_model(String role,int amount){
-        this.shift_model.put(role,amount);
-
+    public void setShift_model(Role role, int amount) {
+        this.staffingRequirement.setRequirement(role, amount);
     }
+
+    public void setShift_roles(Employee e, Role role) {
+        this.shiftAssignment.assign(e, role);
+    }
+
+    public Map<Employee,Role> getShift_roles(){
+        return this.shiftAssignment.getAssignments();
+    }
+
+    public Map<Role,Integer> getShift_model(){
+        return this.staffingRequirement.getModel();
+    }
+
+    public StaffingRequirement getStaffingRequirement(){
+        return this.staffingRequirement;
+    }
+
+
     public Employee getShift_manager(){
         return this.shift_manager;
     }
@@ -67,15 +97,7 @@ public class Shift {
         return this.type;
     }
 
-    public void setShift_roles(Employee e,String role){
-        this.shift_roles.put(e,role);
-    }
-    public Map<Employee,String> getShift_roles(){
-        return this.shift_roles;
-    }
-    public Map<String,Integer> getShift_model(){
-        return this.shift_model;
-    }
+
 
     public void addExtraHoursAssignment(Employee e, int hours) {
         // CHANGE: Method to record extra hours assignment
@@ -94,14 +116,6 @@ public class Shift {
      * @return true if the employee is already assigned, false otherwise.
      */
     public boolean isEmployeeAssigned(int employeeId) {
-        for (Object obj : shift_roles.keySet()){
-            if (obj instanceof Employee) {
-                Employee e = (Employee) obj;
-                if (e.getId() == employeeId) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return this.shiftAssignment.isEmployeeAssigned(employeeId);
     }
 }

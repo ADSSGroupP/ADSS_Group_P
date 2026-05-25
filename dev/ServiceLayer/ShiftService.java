@@ -4,6 +4,7 @@ import DomainLayer.*;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
+import Transportation.*;
 
 
 /**
@@ -39,11 +40,13 @@ public class ShiftService {
     }
 
     // The main logic for assigning an employee to a specific shift
-    public String assignEmployeeToShift(int employeeId, LocalDate date, char type, String role, int extraHours) {
+    public String assignEmployeeToShift(int employeeId, LocalDate date, char type, Role role, int extraHours) {
         // 1. First, check if employee and shift even exist (Avoid NullPointerException)
         Employee emp = employeeService.getEmployeeById(employeeId);
         if (emp == null) return "Error: Employee not found.";
 
+        Shift shift =  findShiftByDateAndType(date, type);
+        if (shift == null) return "Error: Shift not found.";
 
         // 2. Double Shift Check
         boolean alreadyWorkingThatDay = false;
@@ -69,8 +72,6 @@ public class ShiftService {
                 return "Error: Employee " + emp.getName() + " is already working on this date and did NOT approve a double shift in their constraints.";
             }
         }
-        Shift shift =  findShiftByDateAndType(date, type);
-        if (shift == null) return "Error: Shift not found.";
 
         // 3. Qualification Check
         if (!Arrays.asList(emp.getRoles()).contains(role)) {
@@ -80,6 +81,13 @@ public class ShiftService {
         // 4. Availability Check (Morning/Evening specific constraint)
         if (!isEmployeeAvailableForShift(emp, date, type)) {
             return "Error: Employee has a constraint for this specific shift (" + type + ").";
+        }
+
+        long currentCount = shift.getShift_roles().values().stream().filter(r -> r.equals(role)).count();
+        int requiredCount = shift.getShift_model().getOrDefault(role, 0);
+
+        if (currentCount >= requiredCount) {
+            return "Error: Role " + role + " is already fully staffed according to the shift model.";
         }
         // 5. Final Assignment
         shift.setShift_roles(emp, role);
@@ -91,9 +99,20 @@ public class ShiftService {
     }
 
 
-    // Standard Shift Management Methods
-    public void createShift(LocalDate date, char type, Employee manager, Map<String, Integer> model) {
-        shiftHistory.add(new Shift(date, type, manager, model));
+
+    public void createDefaultShift(LocalDate date, char type, Employee manager, int branch_id) {
+        Shift newShift = new Shift(date, type, manager, branch_id);
+        shiftHistory.add(newShift);
+    }
+
+    public void createCustomShift(LocalDate date, char type, Employee manager, Map<Role, Integer> customModel, int branch_id) {
+        Shift newShift = new Shift(date, type, manager, branch_id);
+
+        if (customModel != null) {
+            customModel.forEach(newShift::setShift_model);
+        }
+
+        shiftHistory.add(newShift);
     }
 // finds all available employees for shift
     public List<Employee> getAvailableEmployeesForShift(LocalDate date, char type) {
@@ -123,7 +142,7 @@ public class ShiftService {
     }
 
     // Handles manager-forced assignments.
-    public String assignExceptionalShift(int employeeId, LocalDate date, char type, String role) {
+    public String assignExceptionalShift(int employeeId, LocalDate date, char type, Role role) {
         Employee emp = employeeService.getEmployeeById(employeeId);
         Shift shift = findShiftByDateAndType(date, type);
 
@@ -162,4 +181,14 @@ public class ShiftService {
         }
         return false;
     }
+
+    public boolean mustHaveStoreKeeper(LocalDate date, char shiftType){
+        return TransportationMock.hasTransportInShift(date,shiftType);
+    }
+
+    public int numOfDriversPairShift(LocalDate date, char shiftType){
+       return TransportationMock.getTransportCount(date, shiftType);
+    }
+
+
 }

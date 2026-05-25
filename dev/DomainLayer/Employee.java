@@ -19,11 +19,13 @@ public class Employee {
     private Boolean is_shift_manager;
     private DayOfWeek day_off;
     private JobTerms terms;
-    private String[] roles;
+    private Role[] roles;
     private List<Constraint> currentConstraints;
+    private String license ;
+    private int branch_id;
 
     // Constructor
-    public Employee(String name, int id,String[] roles, int bank_num, int branch_num, int account_num, DayOfWeek day_off,LocalDate start_date, String job_scope, double global_wage, double hourly_wage) {
+    public Employee(String name, int id, Role[] roles, int bank_num, int branch_num, int account_num, DayOfWeek day_off, LocalDate start_date, String job_scope, double global_wage, double hourly_wage, String license, int branch_id) {
         this.name = name;
         this.id = id;
         this.bank_num = bank_num;
@@ -34,6 +36,8 @@ public class Employee {
         this.terms= new JobTerms(start_date,job_scope, global_wage,hourly_wage);
         this.roles = roles;
         this.currentConstraints = new ArrayList<>();
+        this.license = license;
+        this.branch_id=branch_id;
     }
     public void setIs_shift_manager(){
         is_shift_manager=true;
@@ -44,11 +48,11 @@ public class Employee {
     public String getName(){
         return this.name;
     }
-    public String[] getRoles(){
+    public Role[] getRoles(){
         return roles;
     }
 
-    public void setRoles(String[] r){
+    public void setRoles(Role[] r){
         this.roles=r;
     }
 
@@ -71,5 +75,7 @@ public class Employee {
     public void removeConstraintByDate(LocalDate date) {
         currentConstraints.removeIf(c -> c.getDate().equals(date));
     }
+
+    public String getLicense(){return this.license;}
 }
 
