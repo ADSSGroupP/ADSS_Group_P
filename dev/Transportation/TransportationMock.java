@@ -16,11 +16,10 @@ public class TransportationMock {
     public static String getRequiredLicenseForTransport(int transportId) {
         return "C1";
     }
+
     public static int getTransportId() {
         return 123;
     }
-    public static String getTransportShift(int transportId) {
-        return "m";
-    }
+
 
 }

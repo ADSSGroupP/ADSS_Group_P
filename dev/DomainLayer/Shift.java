@@ -118,4 +118,7 @@ public class Shift {
     public boolean isEmployeeAssigned(int employeeId) {
         return this.shiftAssignment.isEmployeeAssigned(employeeId);
     }
+    public ShiftAssignment getShiftAssignment(){
+        return this.shiftAssignment;
+    }
 }

@@ -190,5 +190,12 @@ public class ShiftService {
        return TransportationMock.getTransportCount(date, shiftType);
     }
 
+    public List<Driver> getAvailableDriversForTransport(LocalDate date, char type, String requiredLicense) {
+        return employeeService.getAllDrivers().stream()
+                .filter(d -> isEmployeeAvailableForShift(d, date, type)) // בדיקת אילוצים רגילה
+                .filter(d -> d.getLicense().equals(requiredLicense))    // בדיקת סוג רישיון
+                .collect(Collectors.toList());
+    }
+
 
 }

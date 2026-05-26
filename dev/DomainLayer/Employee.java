@@ -21,11 +21,10 @@ public class Employee {
     private JobTerms terms;
     private Role[] roles;
     private List<Constraint> currentConstraints;
-    private String license ;
     private int branch_id;
 
     // Constructor
-    public Employee(String name, int id, Role[] roles, int bank_num, int branch_num, int account_num, DayOfWeek day_off, LocalDate start_date, String job_scope, double global_wage, double hourly_wage, String license, int branch_id) {
+    public Employee(String name, int id, Role[] roles, int bank_num, int branch_num, int account_num, DayOfWeek day_off, LocalDate start_date, String job_scope, double global_wage, double hourly_wage, int branch_id) {
         this.name = name;
         this.id = id;
         this.bank_num = bank_num;
@@ -36,7 +35,6 @@ public class Employee {
         this.terms= new JobTerms(start_date,job_scope, global_wage,hourly_wage);
         this.roles = roles;
         this.currentConstraints = new ArrayList<>();
-        this.license = license;
         this.branch_id=branch_id;
     }
     public void setIs_shift_manager(){
@@ -76,6 +74,5 @@ public class Employee {
         currentConstraints.removeIf(c -> c.getDate().equals(date));
     }
 
-    public String getLicense(){return this.license;}
 }
 

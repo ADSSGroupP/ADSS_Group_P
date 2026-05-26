@@ -8,6 +8,8 @@ import Transportation.TransportationMock;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 
+import static Transportation.TransportationMock.getTransportId;
+import java.util.stream.Collectors;
 /**
  * Service class responsible for managing employee-related operations.
  * Handles employee registration, archival (firing), and constraint submission deadlines.
@@ -101,11 +103,19 @@ public class EmployeeService {
         return new ArrayList<>(firedEmployees);
     }
 
-    public boolean checkLicence(int empID){
+    public boolean checkLicence(int empID) {
         Employee emp = getEmployeeById(empID);
-        if (emp.getLicense().equals(TransportationMock.getRequiredLicenseForTransport(TransportationMock.getTransportId()))){
-            return true;
+        if (emp instanceof Driver) {
+            Driver driver = (Driver) emp;
+            return driver.getLicense().equals(TransportationMock.getRequiredLicenseForTransport( TransportationMock.getTransportId()));
         }
         return false;
+    }
+
+    public List<Driver> getAllDrivers() {
+        return employees.stream()
+                .filter(e -> e instanceof Driver)
+                .map(e -> (Driver) e)
+                .collect(Collectors.toList());
     }
 }
