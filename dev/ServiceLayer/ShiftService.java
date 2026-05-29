@@ -100,8 +100,11 @@ public class ShiftService {
 
 
 
-    public void createDefaultShift(LocalDate date, char type, Employee manager, int branch_id) {
+    public void createDefaultShift(LocalDate date, char type, Employee manager, int branch_id, int driversNeeded) {
         Shift newShift = new Shift(date, type, manager, branch_id);
+        if (driversNeeded>0){
+            newShift.setShift_model(Role.DRIVER,driversNeeded);
+        }
         shiftHistory.add(newShift);
     }
 
@@ -186,14 +189,14 @@ public class ShiftService {
         return TransportationMock.hasTransportInShift(date,shiftType);
     }
 
-    public int numOfDriversPairShift(LocalDate date, char shiftType){
+    public int numOfDriversPerShift(LocalDate date, char shiftType){
        return TransportationMock.getTransportCount(date, shiftType);
     }
 
     public List<Driver> getAvailableDriversForTransport(LocalDate date, char type, String requiredLicense) {
         return employeeService.getAllDrivers().stream()
-                .filter(d -> isEmployeeAvailableForShift(d, date, type)) // בדיקת אילוצים רגילה
-                .filter(d -> d.getLicense().equals(requiredLicense))    // בדיקת סוג רישיון
+                .filter(d -> isEmployeeAvailableForShift(d, date, type))
+                .filter(d -> d.getLicense().equals(requiredLicense))
                 .collect(Collectors.toList());
     }
 

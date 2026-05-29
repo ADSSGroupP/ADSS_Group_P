@@ -11,6 +11,7 @@ public class StaffingRequirement {
         this.shift_model = new HashMap<>();
         this.shift_model.put(Role.CASHIER, 2); //Default
         this.shift_model.put(Role.STOREKEEPER, 2); //Default
+        this.shift_model.put(Role.SHIFTMANAGER, 1);
     }
 
     public void setRequirement(Role role, int amount) {

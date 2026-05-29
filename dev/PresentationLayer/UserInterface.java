@@ -180,19 +180,23 @@ public class UserInterface {
             double global = Double.parseDouble(scanner.nextLine());
             System.out.print("Hourly Wage: ");
             double hourly = Double.parseDouble(scanner.nextLine());
-
+            boolean isDriver = false;
             String license="";
             for (Role r : roles) {
                 if (r == Role.DRIVER) {
+                    isDriver = true;
                     System.out.print("Enter driver license type: ");
                     license = scanner.nextLine();
                     break;
                 }
             }
-
-
-
-            Employee newEmp = new Employee(name, id, roles, bankNum, branchNum, accNum, dayOff, LocalDate.now(), jobScope, global, hourly,this.currentBranchId);
+            Employee newEmp;
+            if(isDriver){
+                newEmp = new Driver(name, id, roles, bankNum, branchNum, accNum, dayOff, LocalDate.now(), jobScope, global, hourly,this.currentBranchId,license);
+            }
+            else{
+                newEmp = new Employee(name, id, roles, bankNum, branchNum, accNum, dayOff, LocalDate.now(), jobScope, global, hourly,this.currentBranchId);
+            }
 
             employeeService.addEmployee(newEmp);
             System.out.println("Employee added successfully.");
@@ -222,30 +226,38 @@ public class UserInterface {
             LocalDate d = LocalDate.parse(scanner.nextLine(), dateFormatter);
             System.out.print("Type (m/e): ");
             char t = scanner.nextLine().toLowerCase().charAt(0);
+            if((t!='m')&&(t!='e')){
+                System.out.println("Error: shift type must be m/e");
+                return;
+            }
             System.out.print("Manager ID: ");
             int mId = Integer.parseInt(scanner.nextLine());
             Employee mgr = employeeService.getEmployeeById(mId);
 
             if (mgr == null) {
-                System.out.println("Error: Manager not found.");
+                System.out.println("Error: Employee not found.");
                 return;
             }
-
+            if(!mgr.getIs_shift_manager()){
+                System.out.println("Error: Employee is not qualified as shit manager");
+                return;
+            }
+            int num = shiftService.numOfDriversPerShift(d, t);
             if (shiftService.mustHaveStoreKeeper(d, t)) {
-                int num = shiftService.numOfDriversPairShift(d, t);
                 if (num == 1) {
-                    System.out.print("There is" + num + "transportation during this shift, assign at least one store keeper and " + num + "driver");
+                    System.out.print("There is " + num + " transportation during this shift, assign at least one store keeper\n");
                 } else {
-                    System.out.print("There are" + num + "transportations during this shift, assign at least one store keeper and " + num + "drivers");
+                    System.out.print("There are " + num + " transportations during this shift, assign at least one store keeper\n");
                 }
             }
             System.out.print("Use default staffing requirements (2 Cashiers, 2 Storekeepers)? (y/n): ");
             String useDefault = scanner.nextLine().toLowerCase();
 
             if (useDefault.equals("y")) {
-                shiftService.createDefaultShift(d, t, mgr, this.currentBranchId);
-                System.out.println("Shift created for branch " + currentBranchId);
-            } else {
+                shiftService.createDefaultShift(d, t, mgr, this.currentBranchId, num);
+                System.out.println("There are "+ num +" transportations,"+ num + " drivers added to template");
+                System.out.println("Shift created successfully for branch " + currentBranchId);
+            } else if(useDefault.equals("n")) {
                 Map<Role, Integer> customModel = new HashMap<>();
                 System.out.println("Enter roles and amounts (type 'done' to finish):");
                 while (true) {
@@ -253,12 +265,11 @@ public class UserInterface {
                     String roleName = scanner.nextLine();
                     if (roleName.equalsIgnoreCase("done")) break;
                     if (roleName.equals("DRIVER")) {
-                        System.out.println("Notice: Drivers cannot be added here. They are assigned automatically based on transportations.");
+                        System.out.println("Notice: Drivers are assigned automatically based on transportations.");
                         continue;
                     }
                     try {
                         Role roleEnum = Role.valueOf(roleName.trim().toUpperCase());
-
                         System.out.print("Amount needed: ");
                         int amount = Integer.parseInt(scanner.nextLine());
 
@@ -270,9 +281,13 @@ public class UserInterface {
                             System.out.println("Error: Role '" + roleName + "' is not recognized. (Use: CASHIER, DRIVER, etc.)");
                         }
                     }
+                    customModel.put(Role.DRIVER,num);
                     shiftService.createCustomShift(d, t, mgr, customModel, this.currentBranchId);
-                    System.out.println("Custom shift created successfully.");
                 }
+                System.out.println("There are "+ num +" transportations,"+ num + " drivers added to template");
+                System.out.println("Shift created successfully for branch " + currentBranchId);
+            }else {
+                System.out.println("Invalid input, must enter y/n");
             }
         }catch (Exception e) {
             System.out.println("Error in shift creation process: " + e.getMessage());
@@ -312,94 +327,91 @@ public class UserInterface {
             for (Role roleName : model.keySet()) {
                 int requiredAmount = model.get(roleName);
                 System.out.println("\n>> Role: [" + roleName + "] | Needs: " + requiredAmount + " employees.");
-
+                Set<Integer> assignedDriverIds = new HashSet<>();
                 for (int i = 1; i <= requiredAmount; i++) {
-                    System.out.print("   Enter ID for employee #" + i + " to be a " + roleName + ": ");
-                    int empId = Integer.parseInt(scanner.nextLine());
+                    int empId = -1;
+                    int extraHoursToAssign = 0;
 
-                    if (roleName == Role.SHIFTMANAGER) {
-                        Employee potentialMgr = employeeService.getEmployeeById(empId);
-                        if (potentialMgr == null || !Arrays.asList(potentialMgr.getRoles()).contains(Role.SHIFTMANAGER)) {
-                            System.out.println("   Validation Error: Employee ID " + empId + " is not certified as a Shift Manager.");
-                            i--;
+                    if (roleName == Role.DRIVER) {
+
+                        String reqLicense = TransportationMock.getRequiredLicenseForTransport(TransportationMock.getTransportId());
+                        System.out.println("   [Transport #" + i + " requires License: " + reqLicense + "]");
+
+                        List<Driver> validDrivers = shiftService.getAvailableDriversForTransport(date, type, reqLicense);
+
+                        validDrivers.removeIf(d -> assignedDriverIds.contains(d.getId()));
+                        if (validDrivers.isEmpty()) {
+                            System.out.println("   Error: No available drivers with license " + reqLicense + "!");
                             continue;
                         }
-                    }
 
-                    int extraHoursToAssign = 0;
-                    if (type == 'm') {
-                        System.out.print("   Assign extra hours for this employee? (Enter amount or 0): ");
-                        try {
-                            extraHoursToAssign = Integer.parseInt(scanner.nextLine());
-                        } catch (NumberFormatException e) {
-                            extraHoursToAssign = 0;
-                        }
-                    }
+                        System.out.print("   Available: ");
+                        validDrivers.forEach(d -> System.out.print(d.getName() + " (ID:" + d.getId() + ") "));
 
-                    if(roleName == Role.STOREKEEPER){
-                        hasStoreKeeper=true;
-                    }
+                        Driver selectedDriver = null;
+                        while (selectedDriver == null) {
+                            System.out.print("\n  Enter ID of a driver from the list above: ");
+                            try {
+                                empId = Integer.parseInt(scanner.nextLine());
+                                int finalId =empId;
+                                selectedDriver = validDrivers.stream()
+                                        .filter(d -> d.getId() == finalId)
+                                        .findFirst()
+                                        .orElse(null);
 
-                    String result = shiftService.assignEmployeeToShift(empId, date, type, roleName, extraHoursToAssign);
-                    System.out.println("   Result: " + result);
-
-                    if (result.contains("Error") || result.contains("failed") || result.contains("not qualified")) {
-                        System.out.println("   Please try again for this position.");
-                        i--;
-                    }else if (extraHoursToAssign > 0) {
-                        System.out.println("   -> Extra hours [" + extraHoursToAssign + "] recorded for this assignment.");
-                    }
-                }
-            }
-            if(shiftService.mustHaveStoreKeeper(date,type)&&!hasStoreKeeper){
-                throw new Exception("Validation Error: Shift must have a storekeeper due to transportation constraints.");
-            }
-            if ( shiftService.numOfDriversPairShift(date,type)>0){
-                int numTransports = shiftService.numOfDriversPairShift(date, type);
-                System.out.println("\n There are " + numTransports + " transports in this shift.");
-                String reqLicense = TransportationMock.getRequiredLicenseForTransport(TransportationMock.getTransportId());
-                for (int i = 1; i <= numTransports; i++) {
-                    System.out.println("\n>> Assigning Driver for Transport #" + i + " (Requires License: " + reqLicense + ")");
-
-                    List<Driver> validDrivers = shiftService.getAvailableDriversForTransport(date, type, reqLicense);
-
-                    if (validDrivers.isEmpty()) {
-                        System.out.println("Error: No available drivers found with license " + reqLicense);
-                        break;
-                    }
-
-                    System.out.println("Available Drivers:");
-                    validDrivers.forEach(d -> System.out.println("ID: " + d.getId() + " | Name: " + d.getName()));
-
-                    int driverId = -1;
-                    Driver selectedDriver = null;
-                    while (selectedDriver == null) {
-                        System.out.print("Enter ID of a driver from the list above: ");
-                        try {
-                            driverId = Integer.parseInt(scanner.nextLine());
-
-                            int finalDriverId = driverId;
-                            selectedDriver = validDrivers.stream()
-                                    .filter(d -> d.getId() == finalDriverId)
-                                    .findFirst()
-                                    .orElse(null);
-
-                            if (selectedDriver == null) {
-                                System.out.println("Error: The ID " + driverId + " is not in the list of available drivers. Please try again.");
+                                if (selectedDriver == null) {
+                                    System.out.println("Error: The ID " + empId + " is not in the list of available drivers. Please try again.");
+                                }
+                            } catch (NumberFormatException e) {
+                                System.out.println("Error: Please enter a valid numeric ID.");
                             }
-                        } catch (NumberFormatException e) {
-                            System.out.println("Error: Please enter a valid numeric ID.");
+                        }
+
+                        shiftService.assignEmployeeToShift(empId, date, type, Role.DRIVER, 0);
+                        shift.getShiftAssignment().assignDriverToTransport(i, selectedDriver);
+                        assignedDriverIds.add(selectedDriver.getId());
+                        System.out.println("   Success: Driver " + selectedDriver.getName() + " assigned to Transport #" + i);
+                        continue;
+                    }else {
+
+                        System.out.print("   Enter ID for employee #" + i + " to be a " + roleName + ": ");
+                        try {
+                            empId = Integer.parseInt(scanner.nextLine());
+                        }catch (Exception e) { System.out.println("Invalid ID."); i--; continue; }
+                        }
+
+                        if (roleName == Role.SHIFTMANAGER) {
+                            continue;
+                        }
+
+                        if (type == 'm') {
+                            System.out.print("   Assign extra hours for this employee? (Enter amount or 0): ");
+                            try {
+                                extraHoursToAssign = Integer.parseInt(scanner.nextLine());
+                            } catch (NumberFormatException e) {
+                                extraHoursToAssign = 0;
+                            }
+                        }
+
+                        if(roleName == Role.STOREKEEPER){
+                            hasStoreKeeper=true;
+                        }
+
+                        String result = shiftService.assignEmployeeToShift(empId, date, type, roleName, extraHoursToAssign);
+                        System.out.println("   Result: " + result);
+
+                        if (result.contains("Error") || result.contains("failed") || result.contains("not qualified")) {
+                            System.out.println("   Please try again for this position.");
+                            i--;
+                        }else if (extraHoursToAssign > 0) {
+                            System.out.println("   -> Extra hours [" + extraHoursToAssign + "] recorded for this assignment.");
                         }
                     }
-
-                    shiftService.assignEmployeeToShift(driverId, date, type, Role.DRIVER, 0);
-
-                    shift.getShiftAssignment().assignDriverToTransport(i, selectedDriver);
-
-                    System.out.println("Success: " + selectedDriver.getName() + " assigned to Transport #" + i);
                 }
+            if(shiftService.mustHaveStoreKeeper(date,type)&&!hasStoreKeeper){
+                System.out.println("Validation Error: Shift must have a storekeeper due to transportation constraints.");
+                return;
             }
-
 
             System.out.println("\n--- Scheduling Completed for this Shift ---");
 

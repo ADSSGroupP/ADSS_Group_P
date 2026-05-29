@@ -36,6 +36,11 @@ public class Employee {
         this.roles = roles;
         this.currentConstraints = new ArrayList<>();
         this.branch_id=branch_id;
+        for(int i=0;i<roles.length;i++){
+            if (roles[i]== Role.SHIFTMANAGER){
+                setIs_shift_manager();
+            }
+        }
     }
     public void setIs_shift_manager(){
         is_shift_manager=true;
@@ -73,6 +78,7 @@ public class Employee {
     public void removeConstraintByDate(LocalDate date) {
         currentConstraints.removeIf(c -> c.getDate().equals(date));
     }
+    public boolean getIs_shift_manager(){ return this.is_shift_manager;}
 
 }
 
