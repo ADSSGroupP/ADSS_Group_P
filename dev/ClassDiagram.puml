@@ -1,0 +1,137 @@
+@startuml
+@startuml
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+package DomainLayer {
+
+    class Branch {
+        ~ int branch_id
+        ~ String location
+    }
+
+    class Employee {
+        - String name
+        - int id
+        - double salary
+        - int bank_num
+        - int branch_num
+        - int account_num
+        - Boolean is_shift_manager
+        - DayOfWeek day_off
+        - int branch_id
+        + Employee(...)
+        + setIs_shift_manager()
+        + addConstraint(c: Constraint)
+        + getIs_shift_manager(): boolean
+    }
+
+    class Driver {
+        - String license
+        + Driver(...)
+        + getLicense(): String
+    }
+
+    class Constraint {
+        - int employee_ID
+        ~ LocalDate date
+        - LocalTime start
+        - LocalTime end
+        - Boolean double_shift
+        - int extra_hours
+        - boolean isChangeable
+        + overlapsWith(start, end): boolean
+        + blocksMorningShift(): boolean
+        + blocksEveningShift(): boolean
+    }
+
+    class JobTerms {
+        - LocalDate start_date
+        - String job_scope
+        - double global_wage
+        - double hourly_wage
+        + JobTerms(startDate, scope, global, hourly)
+    }
+
+    class Shift {
+        ~ LocalDate date
+        - char type
+        - int branch_id
+        + setShift_model(role, amount)
+        + setShift_roles(employee, role)
+        + addExtraHoursAssignment(e, hours)
+    }
+
+    class ShiftAssignment {
+        - Map<Employee, Role> shift_roles
+        - Map<Integer, Driver> shift_transportation
+        + assign(e, role)
+        + assignDriverToTransport(id, driver)
+    }
+
+    class StaffingRequirement {
+        - Map<Role, Integer> shift_model
+        + setRequirement(role, amount)
+    }
+
+    class PersonnelManager {
+        - String username
+        - String password
+        - int branch_id
+        + authenticate(pass): boolean
+    }
+
+    enum Role {
+        CASHIER
+        STOREKEEPER
+        DRIVER
+        SHIFTMANAGER
+    }
+
+    ' Relationships
+    Employee <|-- Driver
+    Employee "1" *-- "1" JobTerms
+    Employee "1" *-- "many" Constraint
+    Shift "1" *-- "1" StaffingRequirement
+    Shift "1" *-- "1" ShiftAssignment
+
+    ' Branch Connections
+    Branch "1" <-- "many" Employee : "belongs to"
+    Branch "1" <-- "many" Shift : "hosted at"
+    Branch "1" <-- "1" PersonnelManager : "manages"
+}
+
+package ServiceLayer {
+    class EmployeeService {
+        - List<Employee> employees
+        - List<Employee> firedEmployees
+        + addEmployee(emp)
+        + fireEmployee(id)
+        + checkLicence(id): boolean
+    }
+
+    class ShiftService {
+        - List<Shift> shiftHistory
+        + assignEmployeeToShift(...)
+        + createDefaultShift(...)
+    }
+
+    EmployeeService "1" o-- "many" Employee
+    ShiftService "1" o-- "many" Shift
+    ShiftService ..> EmployeeService : "uses"
+}
+
+package PresentationLayer {
+    class UserInterface {
+        - EmployeeService employeeService
+        - ShiftService shiftService
+        + start()
+        - handleHRChoice(choice)
+    }
+
+    UserInterface ..> EmployeeService
+    UserInterface ..> ShiftService
+}
+@enduml
