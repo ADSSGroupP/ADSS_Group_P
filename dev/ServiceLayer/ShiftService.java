@@ -12,11 +12,11 @@ import Transportation.*;
  * Manages shift history, employee availability, and complex assignment rules (e.g., double shifts, qualifications).
  */
 public class ShiftService {
-    private List<Shift> shiftHistory;
+    private final HRRepository repository;
     private EmployeeService employeeService; // Reference to the employee manager
 
-    public ShiftService(EmployeeService employeeService) {
-        this.shiftHistory = new ArrayList<>();
+    public ShiftService(HRRepository repository,EmployeeService employeeService) {
+        this.repository = repository;
         this.employeeService = employeeService;
     }
 
@@ -50,7 +50,7 @@ public class ShiftService {
 
         // 2. Double Shift Check
         boolean alreadyWorkingThatDay = false;
-        for (Shift s : this.shiftHistory) {
+        for (Shift s :getShiftHistory()) {
             // We check if the employee is already assigned to ANY shift on that date
             if (s.getDate().equals(date) && s.isEmployeeAssigned(employeeId)) {
                 alreadyWorkingThatDay = true;
@@ -95,9 +95,10 @@ public class ShiftService {
         if (extraHours > 0) {
             shift.addExtraHoursAssignment(emp, extraHours);
         }
+
+        repository.saveShift(shift);
         return "Success: " + emp.getName() + " assigned as " + role;
     }
-
 
 
     public void createDefaultShift(LocalDate date, char type, Employee manager, int branch_id, int driversNeeded) {
@@ -105,7 +106,7 @@ public class ShiftService {
         if (driversNeeded>0){
             newShift.setShift_model(Role.DRIVER,driversNeeded);
         }
-        shiftHistory.add(newShift);
+        repository.saveShift(newShift);
     }
 
     public void createCustomShift(LocalDate date, char type, Employee manager, Map<Role, Integer> customModel, int branch_id) {
@@ -114,8 +115,7 @@ public class ShiftService {
         if (customModel != null) {
             customModel.forEach(newShift::setShift_model);
         }
-
-        shiftHistory.add(newShift);
+        repository.saveShift(newShift);
     }
 // finds all available employees for shift
     public List<Employee> getAvailableEmployeesForShift(LocalDate date, char type) {
@@ -126,16 +126,16 @@ public class ShiftService {
 
     //Searches for a specific shift in the history based on date and time of day.
     public Shift findShiftByDateAndType(LocalDate date, char type) {
-        return shiftHistory.stream().filter(s -> s.getDate().equals(date) && s.getType() == type).findFirst().orElse(null);
+        return repository.getShiftByDateAndType(date, type);
     }
 
     //Returns a copy of the shift history list
     public List<Shift> getShiftHistory() {
-        return new ArrayList<>(shiftHistory);
+        return repository.getShiftHistory();
     }
 
     public void addShiftToHistory(Shift shift) {
-        this.shiftHistory.add(shift);
+        repository.saveShift(shift);
     }
 
     // Extracts the maximum extra hours an employee offered to work for a specific date.

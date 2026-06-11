@@ -7,6 +7,7 @@ import Transportation.TransportationMock;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.util.stream.Collectors;
 
 import static Transportation.TransportationMock.getTransportId;
 import java.util.stream.Collectors;
@@ -15,14 +16,11 @@ import java.util.stream.Collectors;
  * Handles employee registration, archival (firing), and constraint submission deadlines.
  */
 public class EmployeeService {
-    // Memory-based list of all employees (including fired ones)
-    private List<Employee> employees;
-    private List<Employee> firedEmployees;
+    private final HRRepository repository;
     private LocalDateTime constraintDeadline;
 
-    public EmployeeService() {
-        this.employees = new ArrayList<>();
-        this.firedEmployees = new ArrayList<>();
+    public EmployeeService(HRRepository repository) {
+        this.repository = repository;
     }
     /**
      * Registers a new work constraint for an employee.
@@ -36,6 +34,7 @@ public class EmployeeService {
         if (emp == null) {return "Error: Employee not found.";}
 
         emp.addConstraint(constraint);
+        repository.saveEmployee(emp);
         return "Success: Constraint added/updated.";
     }
 
@@ -45,17 +44,17 @@ public class EmployeeService {
         if (getEmployeeById(emp.getId()) != null) {
             throw new IllegalArgumentException("Employee ID already exists.");
         }
-        employees.add(emp);
+        repository.saveEmployee(emp);
     }
 
     // Finding an employee by ID using Stream
     public Employee getEmployeeById(int id) {
-        return employees.stream().filter(e -> e.getId() == id).findFirst().orElse(null);
+        return repository.getEmployeeById(id);
     }
 
     // Returns all employees for display purposes
     public List<Employee> getAllEmployees() {
-        return new ArrayList<>(employees);
+        return repository.getAllEmployees();
     }
 
     public void setConstraintDeadline(LocalDateTime deadline) {
@@ -77,8 +76,11 @@ public class EmployeeService {
         Employee emp = getEmployeeById(employeeId);
         if (emp == null) return "Error: Employee not found.";
 
+        repository.removeConstraint(employeeId, date);
         emp.removeConstraintByDate(date);
+
         emp.addConstraint(newConstraint);
+        repository.saveEmployee(emp);
 
         return "Success: Constraint updated for " + date;
     }
@@ -93,14 +95,16 @@ public class EmployeeService {
         }
 
         // 2. Remove from active list and add to fired list
-        employees.remove(empToFire);
-        firedEmployees.add(empToFire);
+        empToFire.setActive(false);
+        repository.saveEmployee(empToFire);
 
         return "Success: Employee " + empToFire.getName() + " (ID: " + id + ") has been moved to fired records.";
     }
 
     public List<Employee> getFiredEmployees() {
-        return new ArrayList<>(firedEmployees);
+        return repository.getAllEmployees().stream()
+                .filter(e -> !e.isActive())
+                .collect(Collectors.toList());
     }
 
     public boolean checkLicence(int empID) {
@@ -113,7 +117,7 @@ public class EmployeeService {
     }
 
     public List<Driver> getAllDrivers() {
-        return employees.stream()
+        return repository.getAllEmployees().stream()
                 .filter(e -> e instanceof Driver)
                 .map(e -> (Driver) e)
                 .collect(Collectors.toList());

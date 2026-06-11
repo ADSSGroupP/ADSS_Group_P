@@ -22,6 +22,7 @@ public class Employee {
     private Role[] roles;
     private List<Constraint> currentConstraints;
     private int branch_id;
+    private boolean isActive = true;
 
     // Constructor
     public Employee(String name, int id, Role[] roles, int bank_num, int branch_num, int account_num, DayOfWeek day_off, LocalDate start_date, String job_scope, double global_wage, double hourly_wage, int branch_id) {
@@ -80,5 +81,8 @@ public class Employee {
     }
     public boolean getIs_shift_manager(){ return this.is_shift_manager;}
 
+    public boolean isActive() { return isActive; }
+
+    public void setActive(boolean active) { this.isActive = active; }
 }
 
