@@ -14,7 +14,7 @@ public class Category {
     private int id;                         // Unique ID for the category
     private String name;                    // Category name (e.g., "Dairy", "Milk")
     private Category parentCategory;        // Reference to the parent (null if top-level)
-    private List<Discount> categoryDiscounts; // List of discounts applied to this category
+    private List<Integer> categoryDiscounts; // List of discounts applied to this category
 
     /**
      * Constructor for a Category.
@@ -39,7 +39,7 @@ public class Category {
      * within this category and its sub-categories.
      * @param d The discount to add.
      */
-    public void addDiscount(Discount d) {
+    public void addDiscount(Integer d) {
         if (d != null) {
             this.categoryDiscounts.add(d);
         }
@@ -49,7 +49,7 @@ public class Category {
      * Retrieves all discounts directly associated with this category.
      * @return A copy of the list of discounts.
      */
-    public List<Discount> getCategoryDiscounts() {
+    public List<Integer> getCategoryDiscounts() {
         return new ArrayList<>(this.categoryDiscounts);
     }
 

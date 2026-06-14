@@ -67,4 +67,13 @@ public abstract class Discount {
     public static int getNextId() {
         return idCounter.getAndIncrement();
     }
+
+    public int getId(){
+        return this.id;
+    }
+
+    public float getDiscountPercent() { return discountPercent; }
+    public LocalDate getStartDate()   { return startDate; }
+    public LocalDate getEndDate()     { return endDate; }
+
 }
