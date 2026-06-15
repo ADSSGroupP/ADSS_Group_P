@@ -282,8 +282,13 @@ public class InventoryService {
 
     public void checkAndProcessPeriodicOrders(int tomorrowDay) {
         for (Product p : products.values()) {
-            if (p.getDeliveryDay() == tomorrowDay && p.isBelowMinStock()) {
-                SuppliersServiceDummy.createAutomaticOrder(p, p.getAmountToOrder());
+            if (p.getDeliveryDay() == tomorrowDay) {
+                int currentStock = p.getGeneral_amount();
+                int minStock = p.getMin_stock();
+                int targetQty = p.getTargetQuantity();
+                // Order enough to bring stock above minimum, at least targetQuantity
+                int qtyToOrder = Math.max(targetQty, minStock - currentStock + 1);
+                SuppliersServiceDummy.createAutomaticOrder(p, qtyToOrder);
             }
         }
     }

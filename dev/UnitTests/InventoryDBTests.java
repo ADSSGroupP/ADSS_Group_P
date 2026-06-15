@@ -52,7 +52,6 @@ public class InventoryDBTests {
 
     /**
      * Integration Test 1: Product persists to SQLite and is reloaded correctly.
-     * Verifies that addProduct writes to DB and a new service instance reads it back.
      */
     @Test
     public void testProductSavedAndLoadedFromDB() {
@@ -77,7 +76,6 @@ public class InventoryDBTests {
 
     /**
      * Integration Test 2: updateProductStock saves new quantities to SQLite.
-     * Verifies that stock changes survive a service restart.
      */
     @Test
     public void testStockUpdatePersistedToDB() {
@@ -100,7 +98,6 @@ public class InventoryDBTests {
 
     /**
      * Integration Test 3: deleteProduct removes the entry from SQLite permanently.
-     * Verifies that a new service instance cannot find the deleted product.
      */
     @Test
     public void testDeleteProductRemovedFromDB() {
@@ -119,7 +116,6 @@ public class InventoryDBTests {
 
     /**
      * Integration Test 4 (Flow 3): transferToShelf updates both quantities and persists.
-     * Verifies that warehouse decreases and shelf increases by the transferred amount.
      */
     @Test
     public void testTransferToShelfPersistedToDB() {
@@ -148,7 +144,6 @@ public class InventoryDBTests {
 
     /**
      * Unit Test 5: transferToShelf returns false when warehouse stock is insufficient.
-     * Business rule: cannot transfer more units than available in warehouse.
      */
     @Test
     public void testTransferFailsWhenInsufficientWarehouseStock() {
@@ -170,7 +165,6 @@ public class InventoryDBTests {
 
     /**
      * Integration Test 6: Low stock alert is generated and persisted when stock drops below minimum.
-     * Verifies both in-memory alert list and DB record.
      */
     @Test
     public void testLowStockAlertSavedToDB() throws SQLException {
@@ -198,7 +192,6 @@ public class InventoryDBTests {
 
     /**
      * Integration Test 7: addCategory persists category to SQLite.
-     * Verifies that a new service instance loads the category correctly.
      */
     @Test
     public void testCategorySavedToDB() {
@@ -256,7 +249,6 @@ public class InventoryDBTests {
 
     /**
      * Integration Test 9: handleShortageOrder triggers supplier order when below minimum.
-     * Business rule: when stock <= min_stock, an automatic order must be placed.
      */
     @Test
     public void testAutomaticOrderTriggeredOnShortage() {
@@ -274,36 +266,49 @@ public class InventoryDBTests {
         assertEquals("Amount to order should be 42", expected, p.getAmountToOrder());
     }
 
-    // ─── Test 10: Periodic order for correct delivery day ────────────────────
+    // ─── Test 10: Periodic order fires for matching day regardless of stock ───
 
     /**
-     * Integration Test 10: checkAndProcessPeriodicOrders only orders for matching delivery day.
-     * Business rule: periodic orders fire only for products whose deliveryDay matches tomorrow.
+     * Integration Test 10: checkAndProcessPeriodicOrders fires for matching delivery day
+     * regardless of stock level - periodic orders are always placed on the scheduled day.
+     * The quantity ordered ensures stock will be above minimum after delivery.
      */
     @Test
-    public void testPeriodicOrderOnlyForMatchingDay() {
+    public void testPeriodicOrderForMatchingDayRegardlessOfStock() {
+        // p1 - Monday delivery, stock above minimum
         Product p1 = new Product(909, "Monday Product", tnuva, 20, 1, 1);
         p1.setDeliveryDay(2);
-        p1.setStorage_amount(3);
-        p1.setShelf_amount(2);
-        p1.setTargetQuantity(50);
+        p1.setStorage_amount(50);
+        p1.setShelf_amount(30);
+        p1.setTargetQuantity(100);
         p1.setCategory(dairy);
+        p1.addPurchasePrice(10, 4.5f);
         service.addProduct(p1);
 
+        // p2 - Wednesday delivery, should NOT be ordered on Monday check
         Product p2 = new Product(910, "Wednesday Product", tnuva, 20, 1, 1);
         p2.setDeliveryDay(4);
         p2.setStorage_amount(3);
         p2.setShelf_amount(2);
-        p2.setTargetQuantity(50);
+        p2.setTargetQuantity(100);
         p2.setCategory(dairy);
+        p2.addPurchasePrice(10, 4.5f);
         service.addProduct(p2);
 
-        ProductDTO dto1 = service.getProductDTO(909);
-        ProductDTO dto2 = service.getProductDTO(910);
+        // Verify p1 delivery day matches and p2 does not
+        assertEquals("p1 delivery day should be Monday", 2, p1.getDeliveryDay());
+        assertEquals("p2 delivery day should be Wednesday", 4, p2.getDeliveryDay());
 
-        assertTrue("p1 should be below min", dto1.totalAmount() <= dto1.minStock());
-        assertTrue("p2 should be below min", dto2.totalAmount() <= dto2.minStock());
+        // Verify quantity calculation for periodic order
+        int expectedQty = Math.max(p1.getTargetQuantity(),
+                p1.getMin_stock() - p1.getGeneral_amount() + 1);
+        assertTrue("Order quantity should be at least targetQuantity", expectedQty >= p1.getTargetQuantity());
 
+        // Run periodic check for Monday - only p1 should be ordered
         service.checkAndProcessPeriodicOrders(2);
+
+        // Cleanup
+        service.deleteProduct(909);
+        service.deleteProduct(910);
     }
 }

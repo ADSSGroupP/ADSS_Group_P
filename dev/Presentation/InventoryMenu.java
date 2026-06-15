@@ -7,10 +7,6 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Command-line UI for the Super-Li Inventory Management System.
- * Delegates all business logic to {@link InventoryService}.
- */
 public class InventoryMenu {
 
     private final InventoryService service;
@@ -21,7 +17,6 @@ public class InventoryMenu {
         this.scanner = new Scanner(System.in);
     }
 
-    /** Main loop — displays the menu and routes user input to handlers. */
     public void start() {
         boolean running = true;
         while (running) {
@@ -37,24 +32,24 @@ public class InventoryMenu {
             System.out.println("9.  Transfer Units: Warehouse -> Shelf");
             System.out.println("10. Add New Category");
             System.out.println("11. View Product Details");
-            System.out.println("12. Check Periodic Orders for Tomorrow");
+            System.out.println("12. Run Periodic Order Check");
             System.out.println("13. Exit System");
             System.out.print("Choice: ");
 
             String choice = scanner.nextLine().trim();
             switch (choice) {
-                case "1":  showReportsSubMenu();      break;
-                case "2":  handleStockUpdate();       break;
-                case "3":  handleDefectiveLog();      break;
-                case "4":  handleAddSupplierPrice();  break;
-                case "5":  handleCreateDiscount();    break;
-                case "6":  handleAddProduct();        break;
-                case "7":  handleUpdateProduct();     break;
-                case "8":  handleDeleteProduct();     break;
-                case "9":  handleTransferToShelf();   break;
-                case "10": handleAddCategory();       break;
-                case "11": handleGetProductDetails(); break;
-                case "12": handlePeriodicOrders();    break;
+                case "1":  showReportsSubMenu();         break;
+                case "2":  handleStockUpdate();          break;
+                case "3":  handleDefectiveLog();         break;
+                case "4":  handleAddSupplierPrice();     break;
+                case "5":  handleCreateDiscount();       break;
+                case "6":  handleAddProduct();           break;
+                case "7":  handleUpdateProduct();        break;
+                case "8":  handleDeleteProduct();        break;
+                case "9":  handleTransferToShelf();      break;
+                case "10": handleAddCategory();          break;
+                case "11": handleGetProductDetails();    break;
+                case "12": handlePeriodicOrderCheck();   break;
                 case "13": running = false; System.out.println("Goodbye!"); break;
                 default:   System.out.println("Invalid selection. Please enter 1-13.");
             }
@@ -63,7 +58,6 @@ public class InventoryMenu {
 
     // ─── Reports ──────────────────────────────────────────────────────────────
 
-    /** Displays the reports sub-menu and delegates to the appropriate report generator. */
     private void showReportsSubMenu() {
         System.out.println("\n--- REPORTS MENU ---");
         System.out.println("1. Periodic Categorized Inventory Report");
@@ -85,7 +79,6 @@ public class InventoryMenu {
 
     // ─── Stock Update ─────────────────────────────────────────────────────────
 
-    /** Prompts for a SKU and new warehouse/shelf quantities, then updates stock. */
     private void handleStockUpdate() {
         try {
             System.out.print("Enter Product SKU: ");
@@ -107,7 +100,6 @@ public class InventoryMenu {
 
     // ─── Transfer Warehouse → Shelf ───────────────────────────────────────────
 
-    /** Transfers a given quantity from warehouse stock to shelf stock. */
     private void handleTransferToShelf() {
         try {
             System.out.print("Enter Product SKU: ");
@@ -138,7 +130,6 @@ public class InventoryMenu {
 
     // ─── Defective Log ────────────────────────────────────────────────────────
 
-    /** Logs a defective or expired item and deducts it from the relevant stock location. */
     private void handleDefectiveLog() {
         try {
             System.out.print("Enter Product SKU: ");
@@ -148,28 +139,36 @@ public class InventoryMenu {
                 System.out.println("ERROR: Product SKU " + sku + " not found.");
                 return;
             }
+
             System.out.print("Location (Store/Storage): ");
             String location = scanner.nextLine().trim();
+
             if (!location.equalsIgnoreCase("Store") && !location.equalsIgnoreCase("Storage")) {
                 System.out.println("ERROR: Invalid location. Please enter 'Store' or 'Storage'.");
                 return;
             }
+
             System.out.print("Quantity Defective: ");
             int quantity = Integer.parseInt(scanner.nextLine());
 
-            int available = location.equalsIgnoreCase("Store") ? p.shelfAmount() : p.storageAmount();
+            int available = location.equalsIgnoreCase("Store")
+                    ? p.shelfAmount()
+                    : p.storageAmount();
+
             if (quantity > available) {
                 System.out.println("ERROR: Cannot log " + quantity +
                         " defective items. Only " + available +
                         " units available in " + location + ".");
                 return;
             }
+
             boolean success = service.logDefectiveAndUpdateStock(sku, quantity, location);
             if (success) {
                 System.out.println("Defect recorded successfully. Stock in " + location + " updated.");
             } else {
                 System.out.println("ERROR: Could not record defective item.");
             }
+
         } catch (NumberFormatException e) {
             System.out.println("ERROR: Please use numeric values for SKU and Quantity.");
         } catch (Exception e) {
@@ -179,7 +178,6 @@ public class InventoryMenu {
 
     // ─── Supplier Pricing ─────────────────────────────────────────────────────
 
-    /** Adds or updates a supplier's unit cost for a given product. */
     private void handleAddSupplierPrice() {
         try {
             System.out.print("Product SKU: ");
@@ -201,7 +199,6 @@ public class InventoryMenu {
 
     // ─── Product CRUD ─────────────────────────────────────────────────────────
 
-    /** Guides the user through adding a new product with category assignment. */
     private void handleAddProduct() {
         try {
             System.out.print("Enter SKU (ID): ");
@@ -210,6 +207,7 @@ public class InventoryMenu {
                 System.out.println("ERROR: Product with SKU " + id + " already exists.");
                 return;
             }
+
             System.out.print("Enter Product Name: ");
             String name = scanner.nextLine();
             System.out.print("Enter Manufacturer ID: ");
@@ -271,7 +269,6 @@ public class InventoryMenu {
         }
     }
 
-    /** Allows updating a product's name and/or minimum stock threshold. */
     private void handleUpdateProduct() {
         try {
             System.out.print("Enter Product SKU to update: ");
@@ -281,14 +278,15 @@ public class InventoryMenu {
                 System.out.println("ERROR: Product SKU " + id + " not found.");
                 return;
             }
+
             System.out.println("Current Name: " + p.name() + " | Current Min Stock: " + p.minStock());
             System.out.print("New Name (press Enter to keep current): ");
             String newName = scanner.nextLine().trim();
             System.out.print("New Min Stock (press Enter to keep current): ");
             String minInput = scanner.nextLine().trim();
 
-            int newMin       = minInput.isEmpty() ? p.minStock() : Integer.parseInt(minInput);
-            String nameToSet = newName.isEmpty()  ? p.name()     : newName;
+            int newMin       = minInput.isEmpty() ? p.minStock()  : Integer.parseInt(minInput);
+            String nameToSet = newName.isEmpty()  ? p.name()      : newName;
 
             service.updateProduct(id, nameToSet, newMin);
             System.out.println("SUCCESS: Product updated.");
@@ -297,7 +295,6 @@ public class InventoryMenu {
         }
     }
 
-    /** Deletes a product after user confirmation. */
     private void handleDeleteProduct() {
         try {
             System.out.print("Enter Product SKU to delete: ");
@@ -321,7 +318,6 @@ public class InventoryMenu {
 
     // ─── Product View ─────────────────────────────────────────────────────────
 
-    /** Displays full details for a product including category hierarchy and pricing. */
     private void handleGetProductDetails() {
         try {
             System.out.print("Enter Product SKU: ");
@@ -343,6 +339,8 @@ public class InventoryMenu {
             System.out.println("Total Qty:     " + p.totalAmount());
             System.out.println("Min Stock:     " + p.minStock());
             System.out.println("Base Price:    " + p.basePrice());
+            System.out.println("Delivery Day:  " + p.deliveryDay());
+            System.out.println("Target Qty:    " + p.targetQuantity());
             float best = service.getBestPriceForProductId(id);
             if (best > 0) System.out.println("Best Current Price: " + best);
         } catch (NumberFormatException e) {
@@ -350,9 +348,32 @@ public class InventoryMenu {
         }
     }
 
+    // ─── Periodic Order Check ─────────────────────────────────────────────────
+
+    /**
+     * Triggers periodic order check for tomorrow's delivery day.
+     * Orders are always placed for products scheduled for tomorrow,
+     * with quantity ensuring stock will be above minimum after delivery.
+     */
+    private void handlePeriodicOrderCheck() {
+        try {
+            System.out.println("Enter tomorrow's delivery day:");
+            System.out.println("1=Sunday, 2=Monday, 3=Tuesday, 4=Wednesday, 5=Thursday, 6=Friday, 7=Saturday");
+            System.out.print("Day: ");
+            int day = Integer.parseInt(scanner.nextLine());
+            if (day < 1 || day > 7) {
+                System.out.println("ERROR: Day must be between 1 and 7.");
+                return;
+            }
+            service.checkAndProcessPeriodicOrders(day);
+            System.out.println("Periodic order check completed for day " + day + ".");
+        } catch (NumberFormatException e) {
+            System.out.println("ERROR: Please enter a numeric value.");
+        }
+    }
+
     // ─── Discount ─────────────────────────────────────────────────────────────
 
-    /** Creates a bulk discount and applies it to a list of product SKUs or category names. */
     public void handleCreateDiscount() {
         try {
             System.out.print("Discount Percentage (0-100): ");
@@ -392,30 +413,8 @@ public class InventoryMenu {
         }
     }
 
-    // ─── Periodic Orders ──────────────────────────────────────────────────────
-
-    /**
-     * Checks whether any products need a periodic supplier order for tomorrow.
-     * The user enters the day number (1=Sun … 7=Sat) representing tomorrow.
-     */
-    private void handlePeriodicOrders() {
-        try {
-            System.out.print("Enter tomorrow's day (1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat): ");
-            int day = Integer.parseInt(scanner.nextLine().trim());
-            if (day < 1 || day > 7) {
-                System.out.println("ERROR: Day must be between 1 and 7.");
-                return;
-            }
-            service.checkAndProcessPeriodicOrders(day);
-            System.out.println("Periodic order check complete.");
-        } catch (NumberFormatException e) {
-            System.out.println("ERROR: Please enter a numeric value.");
-        }
-    }
-
     // ─── Category ─────────────────────────────────────────────────────────────
 
-    /** Adds a main category and optionally sub and sub-sub categories. */
     private void handleAddCategory() {
         try {
             System.out.print("Enter Main Category Name: ");
@@ -446,12 +445,6 @@ public class InventoryMenu {
         }
     }
 
-    /**
-     * Handles category selection or creation during product assignment.
-     * @param choice "1" to link existing, "2" to create new.
-     * @param parent the parent category, or null for top-level.
-     * @return the resolved or newly created {@link Category}, or null on error.
-     */
     private Category handleCategoryLogic(String choice, Category parent) {
         System.out.print("Enter Category Name: ");
         String catName = scanner.nextLine().trim();
