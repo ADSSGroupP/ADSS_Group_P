@@ -1,0 +1,125 @@
+package ServiceLayer;
+
+import java.util.ArrayList;
+import java.util.List;
+import DomainLayer.*;
+import Transportation.TransportationMock;
+
+import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.stream.Collectors;
+
+import static Transportation.TransportationMock.getTransportId;
+import java.util.stream.Collectors;
+/**
+ * Service class responsible for managing employee-related operations.
+ * Handles employee registration, archival (firing), and constraint submission deadlines.
+ */
+public class EmployeeService {
+    private final HRRepository repository;
+    private LocalDateTime constraintDeadline;
+
+    public EmployeeService(HRRepository repository) {
+        this.repository = repository;
+    }
+    /**
+     * Registers a new work constraint for an employee.
+     * @return Success message or an Error message if the deadline has passed or employee not found.
+     */
+    public String insertConstraint(int employeeId, Constraint constraint) {
+        if (isDeadlinePassed()) {
+            return "Error: The deadline for submitting/editing constraints has passed.";
+        }
+        Employee emp = getEmployeeById(employeeId);
+        if (emp == null) {return "Error: Employee not found.";}
+
+        emp.addConstraint(constraint);
+        repository.saveEmployee(emp);
+        return "Success: Constraint added/updated.";
+    }
+
+
+    // Adds a new employee to the system
+    public void addEmployee(Employee emp) {
+        if (getEmployeeById(emp.getId()) != null) {
+            throw new IllegalArgumentException("Employee ID already exists.");
+        }
+        repository.saveEmployee(emp);
+    }
+
+    // Finding an employee by ID using Stream
+    public Employee getEmployeeById(int id) {
+        return repository.getEmployeeById(id);
+    }
+
+    // Returns all employees for display purposes
+    public List<Employee> getAllEmployees() {
+        return repository.getAllEmployees();
+    }
+
+    public void setConstraintDeadline(LocalDateTime deadline) {
+        this.constraintDeadline = deadline;
+    }
+
+    public boolean isDeadlinePassed() {
+        if (constraintDeadline == null) return false; // If no deadline set, it's open
+        return LocalDateTime.now().isAfter(constraintDeadline);
+    }
+
+    //Updates an existing constraint by removing the old one and adding the new entry.
+    public String editConstraint(int employeeId, LocalDate date, Constraint newConstraint) {
+        // CHANGE: Enforce deadline check for editing as well
+        if (isDeadlinePassed()) {
+            return "Error: The deadline for editing constraints has passed.";
+        }
+
+        Employee emp = getEmployeeById(employeeId);
+        if (emp == null) return "Error: Employee not found.";
+
+        repository.removeConstraint(employeeId, date);
+        emp.removeConstraintByDate(date);
+
+        emp.addConstraint(newConstraint);
+        repository.saveEmployee(emp);
+
+        return "Success: Constraint updated for " + date;
+    }
+
+    //Transitions an employee from the active roster to the fired archive.
+    public String fireEmployee(int id) {
+        // 1. Find the employee in the active list
+        Employee empToFire = getEmployeeById(id);
+
+        if (empToFire == null) {
+            return "Error: Active employee with ID " + id + " not found.";
+        }
+
+        // 2. Remove from active list and add to fired list
+        empToFire.setActive(false);
+        repository.saveEmployee(empToFire);
+
+        return "Success: Employee " + empToFire.getName() + " (ID: " + id + ") has been moved to fired records.";
+    }
+
+    public List<Employee> getFiredEmployees() {
+        return repository.getAllEmployees().stream()
+                .filter(e -> !e.isActive())
+                .collect(Collectors.toList());
+    }
+
+    public boolean checkLicence(int empID) {
+        Employee emp = getEmployeeById(empID);
+        if (emp instanceof Driver) {
+            Driver driver = (Driver) emp;
+            return driver.getLicense().equals(TransportationMock.getRequiredLicenseForTransport( TransportationMock.getTransportId()));
+        }
+        return false;
+    }
+
+    public List<Driver> getAllDrivers() {
+        return repository.getAllEmployees().stream()
+                .filter(e -> e instanceof Driver)
+                .map(e -> (Driver) e)
+                .collect(Collectors.toList());
+    }
+}
