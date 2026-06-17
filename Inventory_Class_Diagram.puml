@@ -1,0 +1,139 @@
+@startuml
+title Inventory Management - Data Structure (Attributes Only)
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide methods
+
+package "Presentation" {
+    class InventoryMenu {
+        - service : InventoryService
+        - scanner : Scanner
+    }
+
+    class DataInitializer
+    class Main
+}
+
+package "Service" {
+    class InventoryService {
+        - products : Map<Integer, Product>
+        - categories : Map<Integer, Category>
+        - systemDiscounts : List<Discount>
+        - defectiveItems : List<DefectiveItem>
+        - alerts : List<LowStockAlert>
+    }
+
+    class SuppliersServiceDummy
+    class IntegrationTester
+    class IntegrationDummyFunctions
+}
+
+package "Domain" {
+    class Product {
+        - id : int
+        - name : String
+        - manufacturer : Manufacturer
+        - min_stock : int
+        - storage_amount : int
+        - shelf_amount : int
+        - aisle : int
+        - shelf : int
+        - deliveryDay : int
+        - targetQuantity : int
+        - supplierCosts : Map<Integer, List<Float>>
+        - salesHistory : List<Float>
+        - specificDiscounts : List<Integer>
+        - category : Category
+        - sub_category : Category
+        - sub_sub_category : Category
+    }
+
+    class Category {
+        - id : int
+        - name : String
+        - parentCategory : Category
+        - categoryDiscounts : List<Integer>
+    }
+
+    class Manufacturer {
+        - id : int
+        - name : String
+    }
+
+    abstract class Discount {
+        # id : int
+        # discountPercent : float
+        # startDate : LocalDate
+        # endDate : LocalDate
+    }
+
+    class ProductDiscount {
+        - eligibleProducts : List<Product>
+    }
+
+    class CategoryDiscount {
+        - eligibleCategories : List<Category>
+    }
+
+    class DefectiveItem {
+        - product : Product
+        - defectiveQuantity : int
+        - defectiveLocation : String
+    }
+
+    class LowStockAlert {
+        - productId : int
+        - productName : String
+        - currentStock : int
+        - minStock : int
+        - generatedAt : LocalDateTime
+    }
+
+    abstract class Report {
+        - date : LocalDateTime
+    }
+
+    class InventoryReport
+    class ShortageReport
+    class DefectiveReport
+}
+
+' --- Relationships ---
+
+InventoryMenu ..> InventoryService : uses
+Main ..> InventoryMenu : creates
+Main ..> DataInitializer : uses
+Main ..> InventoryService : creates
+
+InventoryService "1" o-- "0..*" Product : products
+InventoryService "1" o-- "0..*" Category : categories
+InventoryService "1" o-- "0..*" DefectiveItem : defectiveItems
+InventoryService "1" o-- "0..*" Discount : systemDiscounts
+InventoryService "1" o-- "0..*" LowStockAlert : alerts
+
+InventoryService ..> InventoryReport : generates
+InventoryService ..> ShortageReport : generates
+InventoryService ..> DefectiveReport : generates
+InventoryService ..> SuppliersServiceDummy : uses
+
+Product "0..*" --> "1" Category : main
+Product "0..*" --> "0..1" Category : sub
+Product "0..*" --> "0..1" Category : sub-sub
+Product "0..*" --> "1" Manufacturer
+
+Category "0..*" --> "0..1" Category : parent
+
+DefectiveItem "0..*" --> "1" Product
+LowStockAlert ..> Product : snapshots
+
+ProductDiscount "0..*" --> "0..*" Product : eligible
+CategoryDiscount "0..*" --> "0..*" Category : eligible
+
+Discount <|-- ProductDiscount
+Discount <|-- CategoryDiscount
+Report <|-- InventoryReport
+Report <|-- ShortageReport
+Report <|-- DefectiveReport
+
+@enduml
