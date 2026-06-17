@@ -1,107 +1,161 @@
-# ADSS Assignment 2 - SuperLi Supermarket Management System
+# ADSS Assignment 2
 
-## 👥 Team Members & Contribution
-* **Hadas Bakalzuk** - ID: 325213080
-* **Rotem Onn** - ID: 322991910
-* **Noa Eliyahou** - ID: 318939212
-* **Coral Goldman** - ID: 322251976
+Name: Hadas Bakalzuk  
+ID: 325213080  
 
----
+Name: Rotem Onn  
+ID: 322991910  
 
-##  Modeling Tools & Environment
-* **System Modeling & Diagrams:** All architecture models, diagrams, and structural trees were built using **draw.io**.
-* **Deliverable Formats:** In accordance with the submission guidelines, all diagrams have been exported to **PDF/PNG** for viewing, and their matching editable **XML** files are included in the corresponding project directories to facilitate direct verification.
+Name: Noa Eliyahou  
+ID: 318939212  
 
----
+Name: Coral Goldman  
+ID: 322251976  
 
-##  Project Description
-This project is an enterprise-grade Supermarket Management System developed as part of the ADSS course. The system provides a comprehensive, modular, and layered console-based solution to manage a supermarket's daily logistics, supply chain, and human resources.
+## Project Description
 
-The system seamlessly integrates two core operational domains:
-1. **Employee & Shift Management Module (Workers):** Handles HR operations, weekly shifting schedules, staffing constraint validations, dynamic role definitions, and employee availability submissions.
-2. **Inventory Management Module:** Manages all supermarket products and their stock. It divides stock between the warehouse and the store shelves. It calculates the best discounts for customers and logs damaged or expired items. When stock is too low or a delivery is planned, it automatically creates order forms for the best supplier.
-The codebase is written entirely in **Java**, leverages an **SQLite database** for robust data persistence between sessions, and strictly adheres to Object-Oriented Programming (OOP) design patterns, separation of concerns, and clean architectural principles.
+The system models an integrated enterprise supermarket management platform, split into two primary operational domains:
 
----
+* **Inventory Management Subsystem:** Governs product logging, dual-location tracking (shelves vs. backroom storage), promotional discount calculations, and automatic supplier order forms creation upon low stock thresholds or scheduled delivery dates.
+* **Employee & HR Management Subsystem:** Handles HR workflows, weekly shift templates, staffing rule compliance, driver license checks, dynamic role definitions, and worker availability exceptions.
 
-## Project Structure & Deliverables Matrix
-To simplify project verification and ensure no required documents are missing, all analysis, behavioral contracts, and system code have been structured into distinct, self-contained directories:
+## Modeling Tool
+
+The system models and diagrams were created using draw.io.
+
+## Project Structure
+
+* `docs/` — Contains all system analysis artifacts, functional specifications, requirement ledgers, and architectural diagrams.
+* `dev/` — Contains the Java source packages distributed across decoupled presentation, service, domain, and data access layers.
+* `release/` — Contains the standalone compiled, executable JAR artifact containing the entire application suite.
+* `README.md` — Contains general information about the project, the tools used, and instructions for running it.
 
 ### 1. Analysis & Modeling Directory (`/docs`)
-* **`/use-cases`** - Contains the overall Use-Case diagram (`use-case-diagram.pdf` & `.xml`) along with detailed functional specifications for our chosen scenario pathways (`use-case-d.pdf` / `main.xml` / `alt.xml`).
-* **`/contracts`** - Houses formal business behavior specifications written using camelCase function conventions (e.g., `contract-actionName.pdf`).
-* **`/sequence-diagrams`** - Stores the corresponding behavioral realizations mapped via sequence layouts (`seq-diagram-actionName.pdf` & `.xml`) to track active system event sequences.
-* **`class-diagram.pdf` & `class-diagram.xml`** - The fully updated domain class diagram detailing system relationships, fields, and operations.
-* **`requirements.pdf`** - The finalized, updated non-functional and functional project requirements ledger[cite: 27].
+* **`/use-cases`** — Contains the overall Use-Case diagram along with detailed functional specifications for the chosen scenario pathways.
+* **`/contracts`** — Houses formal business behavior specifications and operational invariants.
+* **`/sequence-diagrams`** — Stores behavioral realizations mapped via sequence layouts to track active object communication flows.
+* **`class-diagram`** — The fully updated system domain class diagram detailing relationships, fields, and method headers.
+* **`requirements.pdf`** — The finalized functional and non-functional engineering requirement specifications ledger.
 
-### 2. Implementation Codebase (`/dev/src`)
-* **`Domain/`** - Core business objects (`Product`, `Category`, `DefectiveItem`), state logic, and baseline validation checks.
-* **`DTO/`** - Data Transfer Objects built as modern Java `record` types ensuring lightweight, immutable data transmission across system boundaries.
-* **`Service/`** - The application facade layer (`InventoryService`) handling operational flow execution, persistence repository routing, and supplier automation hooks.
-* **`Presentation/`** - Interactive 13-option management console menu (`InventoryMenu`) and automated persistence table seed scripts (`DataInitializer`).
-* **`UnitTests/`** - Comprehensive testing framework splitting operational quality assurance into `InventoryDomainTests` (Unit logic) and `InventoryDBTests` (Integration/SQLite connectivity).
-* **`WorkersModule/`** - Comprehensive structural layer managing employee and shift allocation states.
+### 2. Implementation Codebase (`/dev`)
 
----
+#### Inventory Module Components
+* **`Domain/`** — Core business objects (`Product`, `Category`, `Discount`, `DefectiveItem`) containing state logic and localized baseline validation checks.
+* **`DTO/`** — Data Transfer Objects engineered as modern Java structures ensuring lightweight, immutable transmission across system boundaries.
+* **`Service/`** — The application facade layer (`InventoryService`) handling operational orchestration, database transactions, and supplier replenishment hooks.
+* **`Presentation/`** — Interactive management console menu (`InventoryMenu`) and automated persistence table seed scripts.
 
-## 🚀 How to Run & User Guide
-
-### 1. Initial Launch and Data Sources
-Run the `Main` class from your preferred IDE. At boot, the system instantiates a database connection hook via `DatabaseManager` and evaluates the storage landscape. A startup prompt presents three data seeding behaviors:
-* `1` - **Default DB:** Seeds the persistent storage with sample entities (e.g., Tnuva Milk 3%, Cottage Cheese, Osem Bamba) mapping various hierarchical categories, if the system is blank.
-* `2` - **Custom DB:** Seeds a minimal testing target product environment (e.g., FreshCo test item).
-* `3` - **Start Empty / Load Existing:** Skips seeding entirely and boots directly using the active state data saved inside the persistent `superli_inventory.db` file.
-
-*A graceful shutdown hook automatically triggers at application exit to safely close the SQLite database connection cleanly.*
+#### Employees Module Components
+* **`DomainLayer/`** — Rich business objects (`Employee`, `Driver`, `Constraint`, `Shift`, `StaffingRequirement`, `ShiftAssignment`) paired with `Role` enums and the `HRRepositoryImpl` mapping adapter.
+* **`DTO/`** — Data Transfer Objects (`EmployeeDTO`, `ConstraintDTO`, `ShiftDTO`) utilized for flat data movement without business logic.
+* **`ServiceLayer/`** — Contains `EmployeeService` (manages registration, archives, and deadlines) and `ShiftService` (validates schedules, enforces role quotas, and manages over-time limits).
+* **`PresentationLayer/`** — Houses the entry controller (`Main`) and the `UserInterface` command-line CLI layout.
+* **`DataAccessLayer/`** — Contains the centralized `Database` broker alongside native SQL preparation mappers (`JdbcEmployeeDAO`, `JdbcConstraintDAO`, `JdbcShiftDAO`).
 
 ---
 
-### 👥 Workers Module (HR & Shifts)
-The application roots an access portal dividing users into roles:
-1. **HR Manager Mode** (Password protected via default password: `1234`)
-2. **Employee Mode** (Authenticated via Employee ID)
+## Database Schema & Relational Tables (SQLite)
 
-#### **HR Manager Actions:**
-* **Workforce Administration:** Register new employees, view comprehensive team grids, and toggle employment status flags (Active/Inactive).
-* **Role Catalogs:** Dynamically append, customize, or track operational job descriptions.
-* **Shift Logistics:** Generate future weekly shift timelines, enforce custom staffing counts per shift, select certified Shift Managers, block shifts, and extract historical shift logs.
+The application utilizes local relational database targets powered by embedded SQLite engines to handle data persistence seamlessly between runtime sessions:
 
-> ⚠️ **Automated Shift Assignment Validation Rules:**
-> During scheduling assignments, the system automatically checks that the target employee exists, is active, carries the explicit role certification, has submitted availability, and that the chosen shift is open (not blocked). For **Drivers**, it rigorously ensures that their driving license classification matches the required truck type for delivery.
+### Employees Module Database (`superlee.db`)
+Tracks personnel profiles, rolling calendar availability parameters, and assigned shift matrices:
+* **`employees`**: Registers personal profiles, banking details, wage rules, active flags, a comma-separated string mapping certified profiles, and specialized vehicle categories (`license`) for commercial operators.
+* **`constraints`**: Maps submitted worker availability exceptions, tracking time dimensions, double-shift flags, and malleability parameters (Flexible vs. Hard constraints).
+* **`shifts`**: Records configured execution blocks mapping calendar dates, shift types (`m` for morning, `e` for evening), assigned shift managers, and branch properties.
+* **`shift_requirements` / `shift_assignments`**: Connects staffing role quotas against actual allocated personnel and explicitly tracked over-time allowances.
 
-#### **Employee Actions:**
-* File future shift availability matrices before the HR-defined locking deadline.
-* View the finalized and published weekly calendar grid.
-
----
-
-### 📦 Inventory Module (Menu Guide & Domain Rules)
-Selecting the Inventory portal boots the `InventoryMenu` console context loop offering a broad array of administrative capabilities:
-
-#### **Core Features:**
-* **Strict Category Trees (`Category`):** Multi-level category mappings strictly follow a tree hierarchy path (`Main Category -> Sub-Category -> Sub-Sub-Category`). This prevents conflicting category assignments and structural indexing contradictions.
-* **Smart Promotion Engine (`Discount`):** Category discounts automatically cascade downward to affect all children sub-categories. If multiple discounts overlap on a single SKU, the calculation engine dynamically resolves the conflicts, matching the item against all valid parameters to output the **optimal (lowest) consumer price** relative to the original base price.
-* **Stock & Replenishment Thresholds:** Products monitor an active `min_stock` threshold. If the combined total stock (Storage + Shelf) drops to or below this minimum limit, immediate console warnings are generated, and a replenishment entry records the required units to reach `targetQuantity`.
-* **Warehouse Refill Flow (Flow 3):** Allows administrators to log the physical replenishment movement of goods from back storage to front-end sales shelves (`transferToShelf()`), ensuring quantities balance smoothly and safely short-circuiting transactions if warehouse volume drops too low.
-* **Defect Quantities Validation (`DefectiveItem`):** When declaring damaged goods, the system performs a sanity check against actual stock files to confirm that the reported quantity realistically exists at that location (Warehouse vs. Shelf) before approving the loss.
+### Inventory Module Database (`superli_inventory.db`)
+Manages structural retail catalogs, multi-level category structures, waste history, and supply chain logistics:
+* **`categories`**: Implements a self-referencing hierarchical structure to connect parent categories down to sub and sub-sub categories cleanly without collision risk.
+* **`products`**: The core stock register tracking global barcode metrics, descriptive titles, minimum safety quantities, and specific manufacturer mappings.
+* **`supplier_costs` / `product_discounts` / `category_discounts`**: Pivot layouts mapping chronological vendor costs and date-restricted promotion windows.
+* **`defective_items` / `low_stock_alerts`**: Auditing files logging reported damaged warehouse goods and automated purchase ledger requests.
 
 ---
 
-## 🔌 Cross-Module Integration Bridge (Inventory ↔ Suppliers)
-The system implements a rigid **Low Coupling** architecture hook via `IntegrationDummyFunctions` to communicate safely with the Suppliers Module without violating layer boundaries:
+## How to Run
 
-* **Automated Shortage Orders:** When an administrator updates a product's stock levels or logs a defective item, if the overall count falls below its `min_stock` threshold, an automated trigger passes through `handleShortageOrder()`. The `SuppliersServiceDummy` instantly intercepts this event, looks up the cheapest vendor using historical cost logs, and renders a formal **Supplier Order Form**.
-* **Periodic Delivery Check:** Driven by `checkAndProcessPeriodicOrders(tomorrowDay)`, this service allows managers to run checks for upcoming deliveries. It evaluates items scheduled for tomorrow, calculates the missing quantity needed to surpass minimum targets, and sends purchase requests to the best supplier.
+### Unified Application Entry
+When you execute the program's `Main` class, a global system gateway menu allows you to choose which administrative subsystem to load:
+
+1. **Inventory Management Subsystem**
+2. **Employee & HR Subsystem**
+3. **Exit System**
 
 ---
 
-## 🧪 Testing Suite & Quality Assurance
-The system features a robust automated testing framework containing comprehensive unit and integration test coverage powered by **JUnit**.
+### Employees Module:
 
-### 1. Domain Unit Tests (`InventoryDomainTests`)
-Focuses on verifying isolated business logic, memory rules, and constraint compliance without hitting external files (testing overlapping discounts, category cascading, and boundary checks).
+#### Overview
+The Workers & HR subsystem coordinates workforce scheduling, shift tracking, operational role assignments, and weekly worker availability profiles. The architecture accommodates two user pathways: HR Manager Mode and Standard Employee Mode.
 
-### 2. DB Integration Tests (`InventoryDBTests`)
-Verifies end-to-end operational pipelines, persistent SQLite side-effects, transfer flows, and active component bridges.
+#### Subsystem Initialization
+Upon booting this module, you must specify an active branch code (`Branch ID`). The system then prompts whether to load the pre-populated database:
+1. **Load Seed Data:** Initializes the environment with pre-configured employee rosters, existing shift records, and sample availability data.
+2. **Empty Start:** Boots into a clean environment without generating baseline entities.
 
-*Note: The integration tests use isolated test-bed ranges (SKUs 901–910) and an automated `tearDown()` script to clean up table fields after execution, ensuring tests leave no permanent dirt in your working DB file.*
+#### Core Subsystem Functions
+* **HR Manager Actions (Password: `6789`):**
+  * Register new personnel and specialized commercial vehicle operators (Drivers).
+  * Establish or adjust the cutoff deadlines for weekly constraint submissions.
+  * Formulate new shift blocks and configure dynamic role staffing requirements.
+  * Distribute floor shift assignments, assign Shift Managers, and review historical logs.
+  * View rolling over-time metrics and change employee status to inactive ("Firing").
+* **Employee Actions (Authenticated via Employee ID):**
+  * Submit weekly calendar availability constraints (boundaries, double-shifts, and extra hours).
+  * Designate constraints as Flexible (override allowed) or Hard (strict assignment block).
+  * View the finalized weekly schedules and current role assignments.
+
+#### Shift Assignment Validation Rules
+The system evaluates strict domain rules before committing a scheduling assignment:
+* The target worker must exist and hold an active employment state tag.
+* The worker must be explicitly certified for the selected operational role.
+* The assignment must not conflict with the employee's submitted hard constraints or designated weekly day-off.
+* **Supply Chain Alignment:** The module calls `TransportationMock` to check if a delivery is arriving. If true, it enforces having at least one **Storekeeper** assigned, and checks that the assigned **Driver** possesses the required license category (e.g., `"C1"`).
+
+#### Operational Notes
+* Saturday is treated as a default rest day (non-working day).
+* Soft constraints are bypassable by management, while hard constraints strictly lock assignments.
+* Employee profiles and schedule states persist across runs via the underlying relational schema.
+
+---
+
+### Inventory Module:
+
+#### Overview
+The Inventory subsystem oversees retail SKU registries, real-time stock balances, defective product deprecation, cascading category pricing trees, and automated vendor purchase loops.
+
+#### Subsystem Initialization
+Upon booting this module, the console will ask you to choose how to initialize and load the data:
+1. **Default DB:** Seeds the persistent storage with a full roster of sample products (e.g., Milk, Cottage, Bamba) across nested categories.
+2. **Custom DB:** Seeds a minimal testing target environment with one single test product.
+3. **Start Empty:** Skips setup entirely and loads your active database file without adding new sample items.
+
+#### Core Subsystem Functions
+* **View & Update Actions (Options 2, 9, 11):**
+  * Check detailed product fields, update active stock levels, or physical replenishment.
+  * Safely move inventory items from the warehouse to the storefront shelves.
+* **Discounts & Category Management (Options 5, 6, 10):**
+  * Add new items, create parent/sub-category trees, and configure bulk promotions.
+  * Apply custom discount percentages for specific date ranges that automatically cascade downward.
+* **Reports & Orders Actions (Options 1, 12, 13):**
+  * Print instant shortage alerts, log defective waste items, and track order histories.
+  * Run checks for upcoming deliveries and generate formal supplier replenishment forms.
+
+#### Supplier Orders Validation Rules
+The system evaluates strict domain rules before committing inventory updates and order pipelines:
+* Products monitor a `min_stock` threshold; if total counts drop below it, immediate alerts and pending orders are triggered.
+* Automated loops query historical cost catalogs to identify the cheapest vendor before rendering order forms.
+* Defect entries perform location sanity checks to confirm the logged waste quantity realistically exists on that location.
+* Physical stock arrivals can be marked as received to automatically transition order states and inflate warehouse counts.
+
+---
+
+## Requirements & Libraries
+
+* **Java Development Kit (JDK 8 or higher)**
+* **IntelliJ IDEA** (or any Java-compatible IDE environment).
+* **SQLite JDBC Driver (by Xerial):** Third-party dependency used for database connectivity and persistence execution (`superlee.db` & `superli_inventory.db`).
+* **JUnit Framework:** External testing library used to power and execute the automated unit and integration testing suites.
+* **draw.io** (required only for viewing or editing the architectural `.drawio` source diagrams).
