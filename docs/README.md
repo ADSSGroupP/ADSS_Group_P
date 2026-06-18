@@ -17,7 +17,7 @@ ID: 322251976
 The system models an integrated enterprise supermarket management platform, split into two primary operational domains:
 
 * **Inventory Management Subsystem:** Governs product logging, dual-location tracking (shelves vs. backroom storage), promotional discount calculations, and automatic supplier order forms creation upon low stock thresholds or scheduled delivery dates.
-* **Employee & HR Management Subsystem:** Handles HR workflows, weekly shift templates, staffing rule compliance, driver license checks, dynamic role definitions, and worker availability exceptions.
+* **Employee & HR Management Subsystem:** Handles HR workflows, weekly shift templates, driver license checks, worker availability exceptions and assigning employees to shifts.
 
 ## Modeling Tool
 
@@ -25,7 +25,7 @@ The system models and diagrams were created using draw.io.
 
 ## Project Structure
 
-* `docs/` — Contains all system analysis artifacts, functional specifications, requirement ledgers, and architectural diagrams.
+* `docs/` — Stores all system modeling files, requirements, functional specs, and architectural diagrams.
 * `dev/` — Contains the Java source packages distributed across decoupled presentation, service, domain, and data access layers.
 * `release/` — Contains the standalone compiled, executable JAR artifact containing the entire application suite.
 * `README.md` — Contains general information about the project, the tools used, and instructions for running it.
@@ -49,7 +49,7 @@ The system models and diagrams were created using draw.io.
 * **`DomainLayer/`** — Rich business objects (`Employee`, `Driver`, `Constraint`, `Shift`, `StaffingRequirement`, `ShiftAssignment`) paired with `Role` enums and the `HRRepositoryImpl` mapping adapter.
 * **`DTO/`** — Data Transfer Objects (`EmployeeDTO`, `ConstraintDTO`, `ShiftDTO`) utilized for flat data movement without business logic.
 * **`ServiceLayer/`** — Contains `EmployeeService` (manages registration, archives, and deadlines) and `ShiftService` (validates schedules, enforces role quotas, and manages over-time limits).
-* **`PresentationLayer/`** — Houses the entry controller (`Main`) and the `UserInterface` command-line CLI layout.
+* **`PresentationLayer/`** — Houses the the `UserInterface` command-line CLI layout.
 * **`DataAccessLayer/`** — Contains the centralized `Database` broker alongside native SQL preparation mappers (`JdbcEmployeeDAO`, `JdbcConstraintDAO`, `JdbcShiftDAO`).
 
 ---
@@ -63,7 +63,6 @@ Tracks personnel profiles, rolling calendar availability parameters, and assigne
 * **`employees`**: Registers personal profiles, banking details, wage rules, active flags, a comma-separated string mapping certified profiles, and specialized vehicle categories (`license`) for commercial operators.
 * **`constraints`**: Maps submitted worker availability exceptions, tracking time dimensions, double-shift flags, and malleability parameters (Flexible vs. Hard constraints).
 * **`shifts`**: Records configured execution blocks mapping calendar dates, shift types (`m` for morning, `e` for evening), assigned shift managers, and branch properties.
-* **`shift_requirements` / `shift_assignments`**: Connects staffing role quotas against actual allocated personnel and explicitly tracked over-time allowances.
 
 ### Inventory Module Database (`superli_inventory.db`)
 Manages structural retail catalogs, multi-level category structures, waste history, and supply chain logistics:
@@ -90,35 +89,26 @@ When you execute the program's `Main` class, a global system gateway menu allows
 #### Overview
 The Workers & HR subsystem coordinates workforce scheduling, shift tracking, operational role assignments, and weekly worker availability profiles. The architecture accommodates two user pathways: HR Manager Mode and Standard Employee Mode.
 
-#### Subsystem Initialization
-Upon booting this module, you must specify an active branch code (`Branch ID`). The system then prompts whether to load the pre-populated database:
-1. **Load Seed Data:** Initializes the environment with pre-configured employee rosters, existing shift records, and sample availability data.
-2. **Empty Start:** Boots into a clean environment without generating baseline entities.
+Upon booting this module, you must specify an active branch code (`Branch ID`). 
 
 #### Core Subsystem Functions
 * **HR Manager Actions (Password: `6789`):**
-  * Register new personnel and specialized commercial vehicle operators (Drivers).
-  * Establish or adjust the cutoff deadlines for weekly constraint submissions.
-  * Formulate new shift blocks and configure dynamic role staffing requirements.
-  * Distribute floor shift assignments, assign Shift Managers, and review historical logs.
-  * View rolling over-time metrics and change employee status to inactive ("Firing").
+  * Register new Employees.
+  * Assign, update, and manage professional role qualifications (`Role[]`) per employee.
+  * Establish weekly constraint submission deadlines and configure shift blocks.
+  * Enforce staffing quotas, block specific shifts, and distribute floor role assignments.
+  * Audit active schedules, track historical logs, and review rolling over-time hours.
+  * Archive staff members by toggling their employment status to inactive ("Firing").
 * **Employee Actions (Authenticated via Employee ID):**
-  * Submit weekly calendar availability constraints (boundaries, double-shifts, and extra hours).
-  * Designate constraints as Flexible (override allowed) or Hard (strict assignment block).
-  * View the finalized weekly schedules and current role assignments.
+  * Submit, edit, or remove weekly calendar availability constraints prior to the deadline.
+  * Flag exceptions as Flexible (allows manager override) or Hard (strictly blocks scheduling).
+  * Preview finalized weekly branch schedules and assigned operational roles.
 
 #### Shift Assignment Validation Rules
 The system evaluates strict domain rules before committing a scheduling assignment:
-* The target worker must exist and hold an active employment state tag.
 * The worker must be explicitly certified for the selected operational role.
 * The assignment must not conflict with the employee's submitted hard constraints or designated weekly day-off.
-* **Supply Chain Alignment:** The module calls `TransportationMock` to check if a delivery is arriving. If true, it enforces having at least one **Storekeeper** assigned, and checks that the assigned **Driver** possesses the required license category (e.g., `"C1"`).
-
-#### Operational Notes
-* Saturday is treated as a default rest day (non-working day).
-* Soft constraints are bypassable by management, while hard constraints strictly lock assignments.
-* Employee profiles and schedule states persist across runs via the underlying relational schema.
-
+* **Supply Chain Alignment:** The module calls `TransportationMock` to check if a delivery is arriving. If true, it enforces having at least one **Storekeeper** assigned, and checks that the assigned **Driver** possesses the required license category.
 ---
 
 ### Inventory Module:
