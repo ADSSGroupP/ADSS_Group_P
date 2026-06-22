@@ -21,7 +21,7 @@ public class PersonnelManager {
         return this.password.equals(inputPassword);
     }
 
-
+    //Getters and Setters
     public void setPassword(String oldPassword, String newPassword) {
         if (authenticate(oldPassword)) {
             this.password = newPassword;

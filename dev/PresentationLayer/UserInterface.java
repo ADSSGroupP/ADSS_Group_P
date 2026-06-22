@@ -674,7 +674,6 @@ public class UserInterface {
             if (eveningAvailable) {
                 System.out.println("AVAILABLE");
             } else {
-                // CHANGE: Integrated the check for potential extra hours directly here to handle scope and visibility
                 int potentialExtra = shiftService.getPotentialExtraHours(emp, date);
                 if (potentialExtra > 0) {
                     System.out.println("BLOCKED (But offers " + potentialExtra + " extra hours from morning shift)");
@@ -683,7 +682,6 @@ public class UserInterface {
                 }
             }
 
-            // CHANGE: General notification for the manager regarding extra hours availability
             int potentialExtra = shiftService.getPotentialExtraHours(emp, date);
             if (potentialExtra > 0) {
                 System.out.println("\n>>> Employee indicated they can work " + potentialExtra + " EXTRA HOURS on this day.");

@@ -15,6 +15,7 @@ public class Driver extends Employee{
         super(name, id, roles,bank_num,branch_num,account_num,day_off,start_date,job_scope,global_wage,hourly_wage,branch_id);
         this.license = license;
     }
+    // Getter method to retrieve the driver's vehicle license type
     public String getLicense(){
         return this.license;
     }

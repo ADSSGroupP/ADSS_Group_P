@@ -6,11 +6,17 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Concrete implementation of the HRRepository interface handling the business-to-data mapping layer.
+ * Coordinates between Domain entities (Employee, Driver, Shift, Constraint) and Data Access Objects (DAOs),
+ * encapsulating domain object reconstitution, soft-deletes, and relational persistence tracking.
+ */
 public class HRRepositoryImpl implements HRRepository {
     private final EmployeeDAO employeeDAO;
     private final ConstraintDAO constraintDAO;
     private final ShiftDAO shiftDAO;
 
+    // Constructor to inject concrete DAO data access dependencies
     public HRRepositoryImpl(EmployeeDAO employeeDAO, ConstraintDAO constraintDAO, ShiftDAO shiftDAO) {
         this.employeeDAO = employeeDAO;
         this.constraintDAO = constraintDAO;
@@ -21,6 +27,7 @@ public class HRRepositoryImpl implements HRRepository {
     // EMPLOYEE MAPPING & OPERATIONS
     // ==========================================
 
+    // Serializes a domain Employee/Driver object into a relational DTO and persists it
     @Override
     public void saveEmployee(Employee emp) {
         EmployeeDTO dto = new EmployeeDTO();
@@ -72,6 +79,7 @@ public class HRRepositoryImpl implements HRRepository {
         }
     }
 
+    // Fetches relational DTO data and reconstructs the corresponding concrete domain entity
     @Override
     public Employee getEmployeeById(int id) {
         EmployeeDTO empDto = employeeDAO.getEmployeeById(id);
@@ -106,29 +114,28 @@ public class HRRepositoryImpl implements HRRepository {
         return emp;
     }
 
+    // Filters and retrieves a list containing only currently active personnel records
     @Override
     public List<Employee> getAllEmployees() {
-        // FILTER: Returns ONLY active employees (where employee.isActive evaluates to true)
         return employeeDAO.getAllEmployees().stream()
                 .map(dto -> getEmployeeById(dto.id))
                 .filter(Objects::nonNull)
                 .filter(Employee::isActive)
                 .collect(Collectors.toList());
     }
+
+    // Filters and retrieves a list containing only inactive or fired personnel records
     @Override
     public List<Employee> getFiredEmployees() {
-        // FILTER: Returns ONLY fired employees (where employee.isActive evaluates to false)
         return employeeDAO.getAllEmployees().stream()
                 .map(dto -> getEmployeeById(dto.id))
                 .filter(Objects::nonNull)
                 .filter(emp -> !emp.isActive())
                 .collect(Collectors.toList());
     }
-
+    // Performs a soft-delete by marking the status flag false and saving changes
     @Override
     public void deleteEmployee(int id) {
-        // SOFT DELETE OVERRIDE: Instead of hard-deleting the row, we locate the domain object,
-        // change its status flag to false, and trigger an UPDATE query via saveEmployee.
         Employee emp = getEmployeeById(id);
         if (emp != null) {
             emp.setActive(false);
@@ -143,13 +150,10 @@ public class HRRepositoryImpl implements HRRepository {
     // CONSTRAINT OPERATIONS
     // ==========================================
 
-    @Override
+    // Converts a domain constraint into a DTO record and logs it to persistent storage    @Override
     public void saveConstraint(Constraint c) {
         ConstraintDTO dto = new ConstraintDTO();
-        // Since we can't get employeeId directly from getter in Constraint (it's private in your original code),
-        // we will need to add a getter 'getEmployeeId()' in Constraint class or reflect it.
-        // ASSUMPTION: You have/will add getEmployeeId() to Constraint.
-        // For now, using reflection-like mapping or assuming you'll add it.
+        // Dynamically extract the hidden employee ID field via reflection fallback if necessary
         dto.employeeId = c.getStartTime() != null ? fetchEmployeeIdViaHack(c) : 0;
         dto.date = c.getDate();
         dto.startTime = c.getStartTime();
@@ -161,6 +165,7 @@ public class HRRepositoryImpl implements HRRepository {
         constraintDAO.insertConstraint(dto);
     }
 
+    // Permanently removes a registered constraint entry matching an employee and a target date
     @Override
     public void removeConstraint(int employeeId, LocalDate date) {
         constraintDAO.deleteConstraint(employeeId, date);
@@ -170,6 +175,7 @@ public class HRRepositoryImpl implements HRRepository {
     // SHIFT MAPPING & OPERATIONS
     // ==========================================
 
+    // Deconstructs shift models, staffing goals, and job assignments into database relation mappings
     @Override
     public void saveShift(Shift shift) {
         // 1. Save core shift details
@@ -196,6 +202,7 @@ public class HRRepositoryImpl implements HRRepository {
         shiftDAO.saveShiftAssignments(shift.getDate(), shift.getType(), assignMap, extraMap);
     }
 
+    // Resolves historical database DTO values to compile a unified stateful Shift object
     @Override
     public Shift getShiftByDateAndType(LocalDate date, char type) {
         ShiftDTO shiftDto = shiftDAO.getShift(date, type);
@@ -204,9 +211,8 @@ public class HRRepositoryImpl implements HRRepository {
         // 1. Fetch the manager from the database using getEmployeeById
         Employee manager = getEmployeeById(shiftDto.managerId);
 
-        // SAFEGUARD: If manager is null (because they were fired or the ID is missing in employees table),
-        // we create a temporary placeholder employee object so the UI won't crash with NullPointerException.
-        if (manager == null) {
+        // Fallback safeguard to handle missing or archived supervisors safely without a crash
+         if (manager == null) {
             manager = new Employee("Manager (ID: " + shiftDto.managerId + ")", shiftDto.managerId,
                     new Role[]{Role.SHIFTMANAGER}, 0, 0, 0,
                     null, null, "N/A", 0, 0, shiftDto.branchId);
@@ -214,19 +220,19 @@ public class HRRepositoryImpl implements HRRepository {
 
         Shift shift = new Shift(shiftDto.date, shiftDto.type, manager, shiftDto.branchId);
 
-        // Load and populate Requirements
+        // 2. Load and register organizational shift structure requirements
         Map<String, Integer> reqs = shiftDAO.getShiftRequirements(date, type);
         if (reqs != null) {
             reqs.forEach((roleStr, amount) -> shift.setShift_model(Role.valueOf(roleStr), amount));
         }
-        // Load and populate Assignments
+
+        // 3. Load, reconstruct, and assign staff rosters and relative overtime values
         Map<Integer, String> assigns = shiftDAO.getShiftAssignments(date, type);
         Map<Integer, Integer> extras = shiftDAO.getShiftExtraHours(date, type);
         if (assigns != null) {
             assigns.forEach((empId, roleStr) -> {
                 Employee emp = getEmployeeById(empId);
-                // SAFEGUARD: If the assigned employee exists, add them.
-                // If they are null (missing/fired), we handle it safely without crashing.
+                // Assign the active worker or handle archived/fired personnel entries safely via context placeholders
                 if (emp != null) {
                     shift.setShift_roles(emp, Role.valueOf(roleStr));
                     if (extras.containsKey(empId)) {
@@ -241,10 +247,10 @@ public class HRRepositoryImpl implements HRRepository {
 
             });
         }
-
         return shift;
     }
 
+    // Extracts and processes all historically scheduled system work shifts
     @Override
     public List<Shift> getShiftHistory() {
         return shiftDAO.getAllShifts().stream()
@@ -252,7 +258,7 @@ public class HRRepositoryImpl implements HRRepository {
                 .collect(Collectors.toList());
     }
 
-    // Small helper helper to bridge the missing employeeId getter if needed
+    // Reflection utility helper used to unlock private context employee ID trackers inside constraints
     private int fetchEmployeeIdViaHack(Constraint c) {
         try {
             java.lang.reflect.Field field = Constraint.class.getDeclaredField("employee_ID");
@@ -262,6 +268,4 @@ public class HRRepositoryImpl implements HRRepository {
             return 0;
         }
     }
-
-
 }
