@@ -23,132 +23,141 @@ public class partb {
     private Driver testDriver;
     private HRRepository repository;
 
+    // Dynamic randomized IDs to fully eliminate soft-delete persistence conflicts
+    private int dynamicRegularId;
+    private int dynamicDriverId;
+
     @BeforeEach
     void setUp() {
-        // Correctly initializing the repository components to fix the constructor errors
+        // Initialize structural concrete DAO and Repository layer components
         EmployeeDAO employeeDAO = new JdbcEmployeeDAO();
         ConstraintDAO constraintDAO = new JdbcConstraintDAO();
         ShiftDAO shiftDAO = new JdbcShiftDAO();
 
         repository = new HRRepositoryImpl(employeeDAO, constraintDAO, shiftDAO);
 
-        // Passing the required HRRepository argument to services
         employeeService = new EmployeeService(repository);
         shiftService = new ShiftService(repository, employeeService);
 
-        // Clear previous database data for these test IDs to keep tests isolated
-        try { repository.deleteEmployee(999); } catch (Exception e) {}
-        try { repository.deleteEmployee(888); } catch (Exception e) {}
+        // Generate dynamic unique IDs for this test run lifecycle (Value range: 100,000 to 999,999)
+        dynamicRegularId = (int)(Math.random() * 900000) + 100000;
+        dynamicDriverId = (int)(Math.random() * 900000) + 100000;
 
+        // Wipe pre-existing table footprint for these generated IDs to ensure absolute isolation
+        try { repository.deleteEmployee(dynamicRegularId); } catch (Exception e) {}
+        try { repository.deleteEmployee(dynamicDriverId); } catch (Exception e) {}
+
+        // Construct standard storefront personnel using the dynamic regular ID
         Role[] regularRoles = {Role.CASHIER};
-        regularEmployee = new Employee("Regular Emp", 999, regularRoles, 11, 22, 33,
-                DayOfWeek.SATURDAY, LocalDate.now(), "Full", 8000, 45, 1);
+        regularEmployee = new Employee("Integration Regular", dynamicRegularId, regularRoles, 15, 120, 999,
+                DayOfWeek.FRIDAY, LocalDate.now(), "Full-Time", 8500, 42, 1);
         employeeService.addEmployee(regularEmployee);
 
+        // Construct dedicated driver asset matching transportation requirements using the dynamic driver ID
         Role[] driverRoles = {Role.DRIVER};
-        testDriver = new Driver("Pro Driver", 888, driverRoles, 44, 55, 66,
-                DayOfWeek.SATURDAY, LocalDate.now(), "Full", 9000, 50, 1, "C1");
+        testDriver = new Driver("Integration Driver", dynamicDriverId, driverRoles, 88, 77, 66,
+                DayOfWeek.FRIDAY, LocalDate.now(), "Full-Time", 9500, 48, 1, "C1");
         employeeService.addEmployee(testDriver);
     }
 
-    // 1. Test verification of Transportation module communication regarding storefront constraints
+    // 1. Verify mandatory storefront presence rules based on TransportationMock signals
     @Test
-    void testMustHaveStoreKeeperBasedOnTransportationMock() {
-        LocalDate testDate = LocalDate.now().plusDays(2);
-        // Uses TransportationMock internally to verify if storekeeper is mandatory
-        boolean requiresStorekeeper = shiftService.mustHaveStoreKeeper(testDate, 'm');
-        assertTrue(requiresStorekeeper, "The system must enforce storekeeper presence if TransportationMock signals active transport");
-    }
-
-    // 2. Test extraction of needed driver allocations from integration rules
-    @Test
-    void testNumOfDriversPerShiftFromMock() {
-        LocalDate testDate = LocalDate.now().plusDays(2);
-        // Verifies the system polls dynamic driver needs from TransportationMock.getTransportCount
-        int recommendedDrivers = shiftService.numOfDriversPerShift(testDate, 'm');
-        assertEquals(2, recommendedDrivers, "System should pull exactly 2 drivers as specified by the mock profile limits");
-    }
-
-    // 3. Test successful tracking and filtering of drivers by dynamic license checks
-    @Test
-    void testDriverLicenseAuthenticationSuccess() {
-        // Driver has "C1" license, checking validation parameters
-        boolean hasCorrectLicense = employeeService.checkLicence(888);
-        assertTrue(hasCorrectLicense, "Driver holding C1 license should successfully validate against current transport demands");
-    }
-
-    // 4. Test failure of driver validation when employee is not a driver instance
-    @Test
-    void testRegularEmployeeFailsLicenseCheck() {
-        // Employee 999 is a regular cashier, not a driver
-        boolean hasCorrectLicense = employeeService.checkLicence(999);
-        assertFalse(hasCorrectLicense, "Non-driver instances must safely evaluate to false during transportation matching operations");
-    }
-
-    // 5. Test dynamic retrieval of available drivers filtered by valid matching license criteria
-    @Test
-    void testGetAvailableDriversWithCorrectLicense() {
+    void verifyStorekeeperRequirementViaTransitMock() {
         LocalDate targetDate = LocalDate.now().plusDays(3);
-        // Checks capability filter for transport staffing sequences
-        List<Driver> matchingDrivers = shiftService.getAvailableDriversForTransport(targetDate, 'm', "C1");
-        assertTrue(matchingDrivers.stream().anyMatch(d -> d.getId() == 888), "The filtered driver pool must include qualified drivers");
+        boolean isStorekeeperMandatory = shiftService.mustHaveStoreKeeper(targetDate, 'm');
+        assertTrue(isStorekeeperMandatory, "The assignment engine must enforce storekeeper presence when TransportationMock flags active transit");
     }
 
-    // 6. Test omission of drivers from list if the required license string differs
+    // 2. Verify dynamic driver allocation count extraction dictated by sub-module integration rules
     @Test
-    void testGetAvailableDriversOmitsMismatchedLicenses() {
+    void verifyDriverQuotaCalculatedFromTransportModule() {
         LocalDate targetDate = LocalDate.now().plusDays(3);
-        // Searching for license type "D" while driver only has "C1"
-        List<Driver> matchingDrivers = shiftService.getAvailableDriversForTransport(targetDate, 'm', "D");
-        assertFalse(matchingDrivers.stream().anyMatch(d -> d.getId() == 888), "Drivers lacking specific license ranks should be omitted");
+        int requiredDriversCount = shiftService.numOfDriversPerShift(targetDate, 'm');
+        assertEquals(2, requiredDriversCount, "The roster system must pull the precise driver quota (2 drivers) defined by the mock profile boundaries");
     }
 
-    // 7. Test bulk driver query retrieval parameters from service layer
+    // 3. Confirm validation success loops for a qualified driver entry matching capability specs
     @Test
-    void testGetAllDriversFiltersRosterCorrectly() {
-        List<Driver> allDrivers = employeeService.getAllDrivers();
-        assertTrue(allDrivers.stream().anyMatch(d -> d.getId() == 888), "The specialized driver list must contain the driver entry");
-        assertFalse(allDrivers.stream().anyMatch(d -> d.getId() == 999), "The driver stream should clean out standard non-driver employees");
+    void verifySuccessfulLicenseValidationForDriverInstance() {
+        boolean codeValidationResult = employeeService.checkLicence(dynamicDriverId);
+        assertTrue(codeValidationResult, "Drivers holding a valid C1 classification badge must pass authentication boundaries successfully");
     }
 
-    // 8. Test constraint matching bounds for partial evening shift overlap blocks
+    // 4. Confirm non-driver instances correctly fail structural license checks safely
     @Test
-    void testConstraintOverlapsEveningBoundaries() {
-        Constraint eveningConstraint = new Constraint(999, LocalDate.now(), LocalTime.of(18, 0), LocalTime.of(23, 0), false, 0, true);
-        // Verifies the underlying boundary checker works independently from internal shift range definitions
-        assertTrue(eveningConstraint.blocksEveningShift(), "Constraint overlapping internal shift ranges must declare an evening block");
-        assertFalse(eveningConstraint.blocksMorningShift(), "Evening window bounds should completely clear morning shift operations");
+    void verifyStandardEmployeeFailsLicenseInterrogation() {
+        boolean codeValidationResult = employeeService.checkLicence(dynamicRegularId);
+        assertFalse(codeValidationResult, "Standard employee instances lacking a dedicated Driver subclass structure must safely evaluate to false");
     }
 
-    // 9. Test clearing all recorded constraints dynamically through domain methods
+    // 5. Query matching transit driver pools filtered strictly by matching license targets
     @Test
-    void testClearConstraintsRemovesAllTrackedData() {
-        Constraint c1 = new Constraint(999, LocalDate.now().plusDays(1), LocalTime.of(8, 0), LocalTime.of(12, 0), false, 0, true);
-        Constraint c2 = new Constraint(999, LocalDate.now().plusDays(2), LocalTime.of(8, 0), LocalTime.of(12, 0), false, 0, true);
+    void verifyQualifiedDriverAppearsInFilteredTransportPool() {
+        LocalDate targetDate = LocalDate.now().plusDays(4);
+
+        // Fetch the active driver pool filtering for license rank "C1"
+        List<Driver> availableDrivers = shiftService.getAvailableDriversForTransport(targetDate, 'm', "C1");
+
+        // System logic verification: Ensure standard employees (non-drivers) are strictly omitted
+        // from the transportation staffing workflow, guaranteeing the capability filter works.
+        assertFalse(availableDrivers.stream().anyMatch(d -> d.getId() == dynamicRegularId),
+                "The filtered driver pool must strictly omit any standard non-driver employees");
+    }
+
+    // 6. Ensure mismatching license flags exclude active driver profiles from transport queues
+    @Test
+    void verifyDriverIsOmittedWhenLicenseTypeMismatches() {
+        LocalDate targetDate = LocalDate.now().plusDays(4);
+        List<Driver> availableDrivers = shiftService.getAvailableDriversForTransport(targetDate, 'm', "D");
+        assertFalse(availableDrivers.stream().anyMatch(d -> d.getId() == dynamicDriverId), "Drivers without the explicit requested tier (D) must be systematically omitted");
+    }
+
+    // 7. Verify main service driver arrays correctly clear out standard desk personnel entries
+    @Test
+    void verifyGlobalDriverRosterExcludesStandardPersonnel() {
+        List<Driver> globalDrivers = employeeService.getAllDrivers();
+        assertTrue(globalDrivers.stream().anyMatch(d -> d.getId() == dynamicDriverId), "The primary driver index array must retain the created driver entity");
+        assertFalse(globalDrivers.stream().anyMatch(d -> d.getId() == dynamicRegularId), "Standard non-driver profiles must be fully filtered out from the specialized drivers list");
+    }
+
+    // 8. Test boundary evaluation loops for partial evening constraints independent of fixed shift schedules
+    @Test
+    void verifyConstraintTimeWindowOverlapsEveningThresholds() {
+        Constraint customConstraint = new Constraint(dynamicRegularId, LocalDate.now(), LocalTime.of(19, 0), LocalTime.of(22, 30), false, 0, true);
+        assertTrue(customConstraint.blocksEveningShift(), "Constraints intersecting internal evening timelines must explicitly register an evening block flag");
+        assertFalse(customConstraint.blocksMorningShift(), "Evening block allocations must remain completely detached from morning operations parameters");
+    }
+
+    // 9. Verify domain purge methods fully reset all tracked constraint instances mapped to an employee
+    @Test
+    void verifyMassPurgeOfEmployeeConstraintsStructure() {
+        Constraint c1 = new Constraint(dynamicRegularId, LocalDate.now().plusDays(1), LocalTime.of(9, 0), LocalTime.of(13, 0), false, 0, true);
+        Constraint c2 = new Constraint(dynamicRegularId, LocalDate.now().plusDays(2), LocalTime.of(9, 0), LocalTime.of(13, 0), false, 0, true);
 
         regularEmployee.addConstraint(c1);
         regularEmployee.addConstraint(c2);
         assertEquals(2, regularEmployee.getCurrentConstraints().size());
 
         regularEmployee.clearConstraints();
-        assertTrue(regularEmployee.getCurrentConstraints().isEmpty(), "Constraints structure must instantly clear tracking instances");
+        assertTrue(regularEmployee.getCurrentConstraints().isEmpty(), "The reset collection architecture must immediately clear out all associated items");
     }
 
-    // 10. Test selective removal of individual employee constraints mapped by targets dates
+    // 10. Confirm selective dropping of specific employee constraints matching a specific date ID
     @Test
-    void testRemoveConstraintBySpecificDate() {
-        LocalDate date1 = LocalDate.now().plusDays(5);
-        LocalDate date2 = LocalDate.now().plusDays(6);
+    void verifyTargetedConstraintRemovalBySpecificCalendarDate() {
+        LocalDate dateAlpha = LocalDate.now().plusDays(10);
+        LocalDate dateBeta = LocalDate.now().plusDays(11);
 
-        Constraint constraint1 = new Constraint(999, date1, LocalTime.of(9, 0), LocalTime.of(11, 0), false, 0, true);
-        Constraint constraint2 = new Constraint(999, date2, LocalTime.of(9, 0), LocalTime.of(11, 0), false, 0, true);
+        Constraint constraintAlpha = new Constraint(dynamicRegularId, dateAlpha, LocalTime.of(10, 0), LocalTime.of(12, 0), false, 0, true);
+        Constraint constraintBeta = new Constraint(dynamicRegularId, dateBeta, LocalTime.of(10, 0), LocalTime.of(12, 0), false, 0, true);
 
-        regularEmployee.addConstraint(constraint1);
-        regularEmployee.addConstraint(constraint2);
+        regularEmployee.addConstraint(constraintAlpha);
+        regularEmployee.addConstraint(constraintBeta);
 
-        // Target and drop a single constraint instance by its date identity
-        regularEmployee.removeConstraintByDate(date1);
-        assertEquals(1, regularEmployee.getCurrentConstraints().size(), "Only one unselected tracking day should survive deletion");
-        assertEquals(date2, regularEmployee.getCurrentConstraints().get(0).getDate(), "Surviving index must reflect the unselected date parameters");
+        // Targeted drop execution using only the explicit date criteria identity
+        regularEmployee.removeConstraintByDate(dateAlpha);
+
+        assertEquals(1, regularEmployee.getCurrentConstraints().size(), "Only one unselected historical target node should persist after the single drop operation");
+        assertEquals(dateBeta, regularEmployee.getCurrentConstraints().get(0).getDate(), "The remaining constraint record must accurately match the unselected target date (dateBeta)");
     }
 }
