@@ -31,12 +31,26 @@ public class HRRepositoryImpl implements HRRepository {
         dto.branchId = 1; // Default or fetched from state
         dto.isActive = emp.isActive();
 
-        // Flatten roles to comma-separated string
+        // Fetch inner JobTerms object from Employee and map financial data
+        var terms = emp.getTerms();
+        if (terms != null) {
+            dto.startDate = terms.getStart_date();
+            dto.jobScope = terms.getJob_scope();
+            dto.globalWage = terms.getGlobal_wage();
+            dto.hourlyWage = terms.getHourly_wage();
+        }
+
+        // Map basic bank account details directly from Employee
+        dto.bankNum = emp.getBank_num();
+        dto.branchNum = emp.getBranch_num();
+        dto.accountNum = emp.getAccount_num();
+
+        // Flatten roles array to a comma-separated string
         dto.rolesCSV = Arrays.stream(emp.getRoles())
                 .map(Role::name)
                 .collect(Collectors.joining(","));
 
-        // If it's a Driver, extract license
+        // Handle specific Driver fields if applicable
         if (emp instanceof Driver) {
             dto.isDriver = true;
             dto.license = ((Driver) emp).getLicense();
@@ -45,14 +59,14 @@ public class HRRepositoryImpl implements HRRepository {
             dto.license = null;
         }
 
-        // Check if employee already exists to decide Insert or Update
+        // Performs a database UPDATE (which updates is_active) if exists, otherwise INSERT
         if (employeeDAO.getEmployeeById(emp.getId()) != null) {
             employeeDAO.updateEmployee(dto);
         } else {
             employeeDAO.insertEmployee(dto);
         }
 
-        // Save their internal constraints as well
+        // Save employee's internal constraints
         for (Constraint c : emp.getCurrentConstraints()) {
             saveConstraint(c);
         }
@@ -63,12 +77,12 @@ public class HRRepositoryImpl implements HRRepository {
         EmployeeDTO empDto = employeeDAO.getEmployeeById(id);
         if (empDto == null) return null;
 
-        // 1. Reconstruct Roles Array
+        // Reconstruct Roles Array from CSV string
         Role[] roles = Arrays.stream(empDto.rolesCSV.split(","))
                 .map(Role::valueOf)
                 .toArray(Role[]::new);
 
-        // 2. Build the domain object (Employee or Driver)
+        // Reconstruct the concrete domain object (Employee or Driver)
         Employee emp;
         if (empDto.isDriver) {
             emp = new Driver(empDto.name, empDto.id, roles, empDto.bankNum, empDto.branchNum,
@@ -81,7 +95,7 @@ public class HRRepositoryImpl implements HRRepository {
         }
         emp.setActive(empDto.isActive);
 
-        // 3. Populate Constraints from ConstraintDAO
+        // Populate constraints from ConstraintDAO
         List<ConstraintDTO> constraintDtos = constraintDAO.getConstraintsByEmployee(id);
         for (ConstraintDTO cDto : constraintDtos) {
             Constraint c = new Constraint(cDto.employeeId, cDto.date, cDto.startTime,
@@ -94,14 +108,35 @@ public class HRRepositoryImpl implements HRRepository {
 
     @Override
     public List<Employee> getAllEmployees() {
+        // FILTER: Returns ONLY active employees (where employee.isActive evaluates to true)
         return employeeDAO.getAllEmployees().stream()
-                .map(dto -> getEmployeeById(dto.id)) // Uses the existing method to fully hydrate constraints
+                .map(dto -> getEmployeeById(dto.id))
+                .filter(Objects::nonNull)
+                .filter(Employee::isActive)
+                .collect(Collectors.toList());
+    }
+    @Override
+    public List<Employee> getFiredEmployees() {
+        // FILTER: Returns ONLY fired employees (where employee.isActive evaluates to false)
+        return employeeDAO.getAllEmployees().stream()
+                .map(dto -> getEmployeeById(dto.id))
+                .filter(Objects::nonNull)
+                .filter(emp -> !emp.isActive())
                 .collect(Collectors.toList());
     }
 
     @Override
     public void deleteEmployee(int id) {
-        employeeDAO.deleteEmployee(id);
+        // SOFT DELETE OVERRIDE: Instead of hard-deleting the row, we locate the domain object,
+        // change its status flag to false, and trigger an UPDATE query via saveEmployee.
+        Employee emp = getEmployeeById(id);
+        if (emp != null) {
+            emp.setActive(false);
+            saveEmployee(emp);
+            System.out.println("Employee " + emp.getName() + " was successfully soft-deleted (status set to inactive).");
+        } else {
+            System.out.println("Employee with ID " + id + " not found.");
+        }
     }
 
     // ==========================================
@@ -166,29 +201,46 @@ public class HRRepositoryImpl implements HRRepository {
         ShiftDTO shiftDto = shiftDAO.getShift(date, type);
         if (shiftDto == null) return null;
 
-        // Reconstruct Manager
+        // 1. Fetch the manager from the database using getEmployeeById
         Employee manager = getEmployeeById(shiftDto.managerId);
 
-        // Build core Shift object
-        Shift shift = new Shift(date, type, manager, shiftDto.branchId);
+        // SAFEGUARD: If manager is null (because they were fired or the ID is missing in employees table),
+        // we create a temporary placeholder employee object so the UI won't crash with NullPointerException.
+        if (manager == null) {
+            manager = new Employee("Manager (ID: " + shiftDto.managerId + ")", shiftDto.managerId,
+                    new Role[]{Role.SHIFTMANAGER}, 0, 0, 0,
+                    null, null, "N/A", 0, 0, shiftDto.branchId);
+        }
+
+        Shift shift = new Shift(shiftDto.date, shiftDto.type, manager, shiftDto.branchId);
 
         // Load and populate Requirements
         Map<String, Integer> reqs = shiftDAO.getShiftRequirements(date, type);
-        reqs.forEach((roleStr, amount) -> shift.setShift_model(Role.valueOf(roleStr), amount));
-
+        if (reqs != null) {
+            reqs.forEach((roleStr, amount) -> shift.setShift_model(Role.valueOf(roleStr), amount));
+        }
         // Load and populate Assignments
         Map<Integer, String> assigns = shiftDAO.getShiftAssignments(date, type);
         Map<Integer, Integer> extras = shiftDAO.getShiftExtraHours(date, type);
-
-        assigns.forEach((empId, roleStr) -> {
-            Employee emp = getEmployeeById(empId);
-            if (emp != null) {
-                shift.setShift_roles(emp, Role.valueOf(roleStr));
-                if (extras.containsKey(empId)) {
-                    shift.addExtraHoursAssignment(emp, extras.get(empId));
+        if (assigns != null) {
+            assigns.forEach((empId, roleStr) -> {
+                Employee emp = getEmployeeById(empId);
+                // SAFEGUARD: If the assigned employee exists, add them.
+                // If they are null (missing/fired), we handle it safely without crashing.
+                if (emp != null) {
+                    shift.setShift_roles(emp, Role.valueOf(roleStr));
+                    if (extras.containsKey(empId)) {
+                        shift.addExtraHoursAssignment(emp, extras.get(empId));
+                    }
+                } else {
+                    // Optional: Create a temporary placeholder for a fired worker if you want them to show in history
+                    Employee firedEmp = new Employee("Fired Worker (ID: " + empId + ")", empId,
+                            new Role[]{Role.valueOf(roleStr)}, 0, 0, 0, null, null, "N/A", 0, 0, shiftDto.branchId);
+                    shift.setShift_roles(firedEmp, Role.valueOf(roleStr));
                 }
-            }
-        });
+
+            });
+        }
 
         return shift;
     }
@@ -210,4 +262,6 @@ public class HRRepositoryImpl implements HRRepository {
             return 0;
         }
     }
+
+
 }

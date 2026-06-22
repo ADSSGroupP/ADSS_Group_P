@@ -102,9 +102,8 @@ public class EmployeeService {
     }
 
     public List<Employee> getFiredEmployees() {
-        return repository.getAllEmployees().stream()
-                .filter(e -> !e.isActive())
-                .collect(Collectors.toList());
+        // REFACTORED: Directly fetch filtered fired records from the repository layer
+        return repository.getFiredEmployees();
     }
 
     public boolean checkLicence(int empID) {

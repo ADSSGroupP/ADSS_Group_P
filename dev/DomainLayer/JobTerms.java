@@ -20,4 +20,16 @@ public class JobTerms {
         this.global_wage=global_wage;
         this.hourly_wage=hourly_wage;
     }
+    public double getGlobal_wage(){
+        return this.global_wage;
+    }
+    public double getHourly_wage(){
+        return this.hourly_wage;
+    }
+    public LocalDate getStart_date(){
+        return start_date;
+    }
+    public String getJob_scope(){
+        return this.job_scope;
+    }
 }

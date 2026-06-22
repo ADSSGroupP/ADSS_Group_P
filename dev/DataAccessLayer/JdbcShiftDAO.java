@@ -29,8 +29,8 @@ public class JdbcShiftDAO implements ShiftDAO {
     public ShiftDTO getShift(LocalDate date, char type) {
         String sql = "SELECT * FROM shifts WHERE date = ? AND type = ?";
         try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, date.toString());
-            pstmt.setString(2, String.valueOf(type));
+            pstmt.setString(1, date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE).trim());
+            pstmt.setString(2, String.valueOf(type).trim());
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     ShiftDTO dto = new ShiftDTO();
@@ -68,31 +68,17 @@ public class JdbcShiftDAO implements ShiftDAO {
 
     @Override
     public void saveShiftRequirements(LocalDate date, char type, Map<String, Integer> requirements) {
-        String deleteSql = "DELETE FROM shift_requirements WHERE shift_date = ? AND shift_type = ?";
-        String insertSql = "INSERT INTO shift_requirements (shift_date, shift_type, role, amount) VALUES (?, ?, ?, ?)";
-
-        try (Connection conn = Database.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement delStmt = conn.prepareStatement(deleteSql);
-                 PreparedStatement insStmt = conn.prepareStatement(insertSql)) {
-
-                delStmt.setString(1, date.toString());
-                delStmt.setString(2, String.valueOf(type));
-                delStmt.executeUpdate();
-
-                for (Map.Entry<String, Integer> entry : requirements.entrySet()) {
-                    insStmt.setString(1, date.toString());
-                    insStmt.setString(2, String.valueOf(type));
-                    insStmt.setString(3, entry.getKey());
-                    insStmt.setInt(4, entry.getValue());
-                    insStmt.addBatch();
-                }
-                insStmt.executeBatch();
-                conn.commit();
-            } catch (SQLException ex) {
-                conn.rollback();
-                throw ex;
+        // MATCHED WITH DB SCHEMA: shift_date, shift_type, role, amount
+        String sql = "INSERT OR REPLACE INTO shift_requirements (shift_date, shift_type, role, amount) VALUES (?, ?, ?, ?)";
+        try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            for (Map.Entry<String, Integer> entry : requirements.entrySet()) {
+                pstmt.setString(1, date.toString());
+                pstmt.setString(2, String.valueOf(type));
+                pstmt.setString(3, entry.getKey());
+                pstmt.setInt(4, entry.getValue());
+                pstmt.addBatch();
             }
+            pstmt.executeBatch();
         } catch (SQLException e) {
             throw new RuntimeException("Error saving shift requirements", e);
         }
@@ -101,6 +87,7 @@ public class JdbcShiftDAO implements ShiftDAO {
     @Override
     public Map<String, Integer> getShiftRequirements(LocalDate date, char type) {
         Map<String, Integer> map = new HashMap<>();
+        // MATCHED WITH DB SCHEMA: shift_date, shift_type, amount
         String sql = "SELECT role, amount FROM shift_requirements WHERE shift_date = ? AND shift_type = ?";
         try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, date.toString());
@@ -118,37 +105,24 @@ public class JdbcShiftDAO implements ShiftDAO {
 
     @Override
     public void saveShiftAssignments(LocalDate date, char type, Map<Integer, String> assignments, Map<Integer, Integer> extraHours) {
-        String deleteSql = "DELETE FROM shift_assignments WHERE shift_date = ? AND shift_type = ?";
-        String insertSql = "INSERT INTO shift_assignments (shift_date, shift_type, employee_id, role, extra_hours) VALUES (?, ?, ?, ?, ?)";
-
-        try (Connection conn = Database.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement delStmt = conn.prepareStatement(deleteSql);
-                 PreparedStatement insStmt = conn.prepareStatement(insertSql)) {
-
-                delStmt.setString(1, date.toString());
-                delStmt.setString(2, String.valueOf(type));
-                delStmt.executeUpdate();
-
-                for (Map.Entry<Integer, String> entry : assignments.entrySet()) {
-                    int empId = entry.getKey();
-                    insStmt.setString(1, date.toString());
-                    insStmt.setString(2, String.valueOf(type));
-                    insStmt.setInt(3, empId);
-                    insStmt.setString(4, entry.getValue());
-                    insStmt.setInt(5, extraHours.getOrDefault(empId, 0));
-                    insStmt.addBatch();
-                }
-                insStmt.executeBatch();
-                conn.commit();
-            } catch (SQLException ex) {
-                conn.rollback();
-                throw ex;
+        // MATCHED WITH DB SCHEMA: shift_date, shift_type, employee_id, role, extra_hours
+        String sql = "INSERT OR REPLACE INTO shift_assignments (shift_date, shift_type, employee_id, role, extra_hours) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            for (Map.Entry<Integer, String> entry : assignments.entrySet()) {
+                int empId = entry.getKey();
+                pstmt.setString(1, date.toString());
+                pstmt.setString(2, String.valueOf(type));
+                pstmt.setInt(3, empId);
+                pstmt.setString(4, entry.getValue());
+                pstmt.setInt(5, extraHours.getOrDefault(empId, 0));
+                pstmt.addBatch();
             }
+            pstmt.executeBatch();
         } catch (SQLException e) {
             throw new RuntimeException("Error saving shift assignments", e);
         }
     }
+
 
     @Override
     public Map<Integer, String> getShiftAssignments(LocalDate date, char type) {

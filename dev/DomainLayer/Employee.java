@@ -84,5 +84,12 @@ public class Employee {
     public boolean isActive() { return isActive; }
 
     public void setActive(boolean active) { this.isActive = active; }
+
+    public int getBank_num(){return this.bank_num;}
+    public int getBranch_num(){return this.branch_num;}
+    public int getAccount_num(){return this.account_num;}
+    public JobTerms getTerms(){return this.terms;}
+
 }
+
 

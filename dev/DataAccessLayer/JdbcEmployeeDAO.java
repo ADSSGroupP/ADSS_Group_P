@@ -39,9 +39,11 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
 
     @Override
     public void updateEmployee(EmployeeDTO dto) {
+        // ADDED: 'is_active=?' column update into the SQL statement right before the WHERE clause
         String sql = "UPDATE employees SET name=?, bank_num=?, branch_num=?, account_num=?, is_shift_manager=?, " +
                 "day_off=?, branch_id=?, start_date=?, job_scope=?, global_wage=?, hourly_wage=?, is_driver=?, " +
-                "license=?, roles=? WHERE id=?";
+                "license=?, roles=?, is_active=? WHERE id=?";
+
         try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, dto.name);
             pstmt.setInt(2, dto.bankNum);
@@ -57,10 +59,11 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
             pstmt.setInt(12, dto.isDriver ? 1 : 0);
             pstmt.setString(13, dto.license);
             pstmt.setString(14, dto.rolesCSV);
-            pstmt.setInt(15, dto.id);
+            pstmt.setInt(15, dto.isActive ? 1 : 0); // Param 15: Maps boolean status (1 for active, 0 for fired)
+            pstmt.setInt(16, dto.id);               // Param 16: Matches the target employee ID
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException("Error updating employee", e);
+            throw new RuntimeException("Error updating employee profile and status", e);
         }
     }
 
@@ -124,6 +127,9 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         dto.isDriver = rs.getInt("is_driver") == 1;
         dto.license = rs.getString("license");
         dto.rolesCSV = rs.getString("roles");
+
+        // CRUCIAL: Reads the integer from DB column and reconstructs the boolean flag for DTO
+        dto.isActive = rs.getInt("is_active") == 1;
         return dto;
     }
 }
