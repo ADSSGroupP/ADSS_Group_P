@@ -3,8 +3,10 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * Represents a work constraint submitted by an employee.
- * It defines time slots where the employee is unavailable or has special conditions.
+ * Domain entity representing an availability constraint submitted by an employee.
+ * Encapsulates specific date and time blocks where the employee is unavailable,
+ * alongside scheduling preferences like overtime limits, double-shift approvals,
+ * and constraint flexibility levels (hard vs soft blocks).
  */
 public class Constraint {
     private int employee_ID;
@@ -15,7 +17,7 @@ public class Constraint {
     private int extra_hours;
     private boolean isChangeable;
 
-
+    // Constructor to initialize a fully defined employee availability constraint
     public Constraint(int ID, LocalDate date, LocalTime start, LocalTime end, boolean double_shift, int extra_hours, boolean isChangeable){
         this.employee_ID = ID;
         this.date = date;
@@ -28,27 +30,24 @@ public class Constraint {
     }
 
 
-    /**
-     * Determines if a given shift type conflicts with this constraint.
-     * @return true if the shift timing overlaps with the constraint hours.
-     */
+    // Evaluates if a given shift's timeframe overlaps with the locked constraint window
     public boolean overlapsWith(LocalTime shiftStart, LocalTime shiftEnd) {
         // A constraint overlaps if:
         // The constraint starts before the shift ends AND ends after the shift starts.
         return this.start.isBefore(shiftEnd) && this.end.isAfter(shiftStart);
     }
 
-    /**
-     * Specific helper for the two shift types defined in the system.
-     */
+    // Checks if this specific constraint overlaps with the default morning shift hours (06:00 - 14:00)
     public boolean blocksMorningShift() {
         return overlapsWith(LocalTime.of(6, 0), LocalTime.of(14, 0));
     }
 
+    // Checks if this specific constraint overlaps with the default evening shift hours (14:00 - 22:00)
     public boolean blocksEveningShift() {
         return overlapsWith(LocalTime.of(14, 0), LocalTime.of(22, 0));
     }
 
+    //Getters and Setters
     public void set_hours(LocalTime start, LocalTime end){
         this.start = start;
         this.end = end;
@@ -57,31 +56,21 @@ public class Constraint {
     public LocalTime getStartTime(){
         return this.start;
     }
-
     public LocalTime getEndTime(){
         return this.end;
     }
     public void set_double_shift(){
         this.double_shift = !double_shift;
     }
-
     public void set_extra_hours(int extra_hours){
         this.extra_hours = extra_hours;
     }
     public LocalDate getDate(){
         return this.date;
     }
-
-    public int getExtraHours() {
-        return this.extra_hours; // getter to access the extra hours field
-    }
-    public boolean isChangeable() {
-        return isChangeable;
-    }
-    public boolean isDoubleShiftApproved() {
-        return double_shift;
-    }
-
+    public int getExtraHours() {return this.extra_hours; }
+    public boolean isChangeable() {return isChangeable;}
+    public boolean isDoubleShiftApproved() {return double_shift;}
 }
 
 
