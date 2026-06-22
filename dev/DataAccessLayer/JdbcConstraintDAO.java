@@ -6,9 +6,13 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * JDBC-based implementation of the ConstraintDAO interface.
+ * Handles SQL execution, parameters binding, and data mapping between
+ * SQLite database rows and ConstraintDTO object structures.
+ */
 public class JdbcConstraintDAO implements ConstraintDAO {
-
+    // Saves or updates a constraint record using standard SQL parameter indexing
     @Override
     public void insertConstraint(ConstraintDTO dto) {
         String sql = "INSERT OR REPLACE INTO constraints (employee_id, date, start_time, end_time, double_shift, extra_hours, is_changeable) " +
@@ -26,7 +30,7 @@ public class JdbcConstraintDAO implements ConstraintDAO {
             throw new RuntimeException("Error inserting constraint", e);
         }
     }
-
+    // Removals a constraint matching both the unique employee reference and date parameters
     @Override
     public void deleteConstraint(int employeeId, LocalDate date) {
         String sql = "DELETE FROM constraints WHERE employee_id = ? AND date = ?";
@@ -38,7 +42,7 @@ public class JdbcConstraintDAO implements ConstraintDAO {
             throw new RuntimeException("Error deleting constraint", e);
         }
     }
-
+    // Queries the database to extract all constraints submitted by a targeted worker ID
     @Override
     public List<ConstraintDTO> getConstraintsByEmployee(int employeeId) {
         List<ConstraintDTO> list = new ArrayList<>();
@@ -55,8 +59,7 @@ public class JdbcConstraintDAO implements ConstraintDAO {
         }
         return list;
     }
-
-    @Override
+    // Gathers all submissions matching a targeted operational calendar date    @Override
     public List<ConstraintDTO> getConstraintsByDate(LocalDate date) {
         List<ConstraintDTO> list = new ArrayList<>();
         String sql = "SELECT * FROM constraints WHERE date = ?";
@@ -72,7 +75,7 @@ public class JdbcConstraintDAO implements ConstraintDAO {
         }
         return list;
     }
-
+    // Helper method: Extracts data from SQL ResultSet rows and maps them into a DTO instance
     private ConstraintDTO mapResultSetToDTO(ResultSet rs) throws SQLException {
         ConstraintDTO dto = new ConstraintDTO();
         dto.employeeId = rs.getInt("employee_id");
