@@ -63,6 +63,8 @@ Tracks personnel profiles, rolling calendar availability parameters, and assigne
 * **`employees`**: Registers personal profiles, banking details, wage rules, active flags, a comma-separated string mapping certified profiles, and specialized vehicle categories (`license`) for commercial operators.
 * **`constraints`**: Maps submitted worker availability exceptions, tracking time dimensions, double-shift flags, and malleability parameters (Flexible vs. Hard constraints).
 * **`shifts`**: Records configured execution blocks mapping calendar dates, shift types (`m` for morning, `e` for evening), assigned shift managers, and branch properties.
+* **`shift_requirements`**: Defines the staffing template demands, representing the required employee quantities and role configurations needed for a specific shift.
+* **`shift_assignments`**: Links real assigned personnel configurations to their respective roles and tracks explicitly logged shift overtime allowances.
 
 ### Inventory Module Database (`superli_inventory.db`)
 Manages structural retail catalogs, multi-level category structures, waste history, and supply chain logistics:
