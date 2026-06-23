@@ -16,6 +16,7 @@ import java.sql.SQLException;
  *   <li>Manufacturers: Tnuva (1), Osem (2)</li>
  *   <li>Categories: Dairy(1) → Milk(2) → FullFat(3); Snacks(4)</li>
  *   <li>Products: SKU 101 (Milk 3%, price 6.90), SKU 102 (Cottage, price 8.50), SKU 201 (Bamba, price 4.90)</li>
+ *   <li>Suppliers: Each product has multiple suppliers at different prices to enable cheapest-supplier selection</li>
  * </ul>
  * Data persists across restarts (SQLite file: superli_inventory.db).
  * </p>
@@ -55,6 +56,7 @@ public class DataInitializer {
         service.addCategory(snacks);
 
         // SKU 101 — Milk 3%
+        // Supplier 10: 4.50 NIS/unit, Supplier 11: 4.20 NIS/unit (cheaper), Supplier 12: 4.80 NIS/unit
         Product milk3 = new Product(101, "Milk 3% Tnuva", tnuva, 20, 5, 2);
         milk3.setCategory(dairy);
         milk3.setSub_category(milk);
@@ -64,10 +66,13 @@ public class DataInitializer {
         milk3.setDeliveryDay(2);
         milk3.setTargetQuantity(100);
         milk3.addSalePrice(6.90f);
-        milk3.addPurchasePrice(10, 4.50f);
+        milk3.addPurchasePrice(10, 4.50f);  // Supplier 10: Tnuva Supplies Ltd.
+        milk3.addPurchasePrice(11, 4.20f);  // Supplier 11: DairyDirect Ltd. (cheapest)
+        milk3.addPurchasePrice(12, 4.80f);  // Supplier 12: FreshMilk Co.
         service.addProduct(milk3);
 
         // SKU 102 — Cottage Cheese
+        // Supplier 10: 5.20 NIS/unit, Supplier 11: 4.90 NIS/unit (cheaper)
         Product cottage = new Product(102, "Cottage Cheese", tnuva, 15, 5, 3);
         cottage.setCategory(dairy);
         cottage.setSub_category(milk);
@@ -76,10 +81,12 @@ public class DataInitializer {
         cottage.setDeliveryDay(3);
         cottage.setTargetQuantity(80);
         cottage.addSalePrice(8.50f);
-        cottage.addPurchasePrice(10, 5.20f);
+        cottage.addPurchasePrice(10, 5.20f);  // Supplier 10: Tnuva Supplies Ltd.
+        cottage.addPurchasePrice(11, 4.90f);  // Supplier 11: DairyDirect Ltd. (cheapest)
         service.addProduct(cottage);
 
         // SKU 201 — Bamba
+        // Supplier 20: 2.80 NIS/unit, Supplier 21: 3.10 NIS/unit, Supplier 22: 2.60 NIS/unit (cheapest)
         Product bamba = new Product(201, "Bamba", osem, 10, 2, 1);
         bamba.setCategory(snacks);
         bamba.setStorage_amount(100);
@@ -87,10 +94,12 @@ public class DataInitializer {
         bamba.setDeliveryDay(4);
         bamba.setTargetQuantity(150);
         bamba.addSalePrice(4.90f);
-        bamba.addPurchasePrice(20, 2.80f);
+        bamba.addPurchasePrice(20, 2.80f);  // Supplier 20: Osem Direct
+        bamba.addPurchasePrice(21, 3.10f);  // Supplier 21: SnackWorld Ltd.
+        bamba.addPurchasePrice(22, 2.60f);  // Supplier 22: BulkSnacks Co. (cheapest)
         service.addProduct(bamba);
 
-        System.out.println("[DB] Default data seeded: 3 products, 4 categories.");
+        System.out.println("[DB] Default data seeded: 3 products, 4 categories, multiple suppliers per product.");
     }
 
     /**
@@ -117,6 +126,8 @@ public class DataInitializer {
         p.setDeliveryDay(3);
         p.setTargetQuantity(50);
         p.addSalePrice(12.00f);
+        p.addPurchasePrice(30, 8.00f);  // Supplier 30
+        p.addPurchasePrice(31, 7.50f);  // Supplier 31 (cheapest)
         service.addProduct(p);
 
         System.out.println("[DB] Custom data seeded: 1 product.");
