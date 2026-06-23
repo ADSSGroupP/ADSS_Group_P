@@ -15,6 +15,7 @@ public class ShiftService {
     private final HRRepository repository;
     private EmployeeService employeeService; // Reference to the employee manager
 
+    // Constructor initializing the repository and employee service context
     public ShiftService(HRRepository repository,EmployeeService employeeService) {
         this.repository = repository;
         this.employeeService = employeeService;
@@ -82,7 +83,7 @@ public class ShiftService {
         if (!isEmployeeAvailableForShift(emp, date, type)) {
             return "Error: Employee has a constraint for this specific shift (" + type + ").";
         }
-
+        // Calculate active staffing numbers against the structural shift model quotas
         long currentCount = shift.getShift_roles().values().stream().filter(r -> r.equals(role)).count();
         int requiredCount = shift.getShift_model().getOrDefault(role, 0);
 
@@ -91,7 +92,7 @@ public class ShiftService {
         }
         // 5. Final Assignment
         shift.setShift_roles(emp, role);
-
+        // Track and register overtime extra hours if requested by the employee configuration
         if (extraHours > 0) {
             shift.addExtraHoursAssignment(emp, extraHours);
         }
@@ -100,7 +101,7 @@ public class ShiftService {
         return "Success: " + emp.getName() + " assigned as " + role;
     }
 
-
+    // Creates and registers a standard default shift with option for required drivers count
     public void createDefaultShift(LocalDate date, char type, Employee manager, int branch_id, int driversNeeded) {
         Shift newShift = new Shift(date, type, manager, branch_id);
         if (driversNeeded>0){
@@ -108,7 +109,7 @@ public class ShiftService {
         }
         repository.saveShift(newShift);
     }
-
+    // Creates a custom tailored shift using a predefined role capacity map matrix
     public void createCustomShift(LocalDate date, char type, Employee manager, Map<Role, Integer> customModel, int branch_id) {
         Shift newShift = new Shift(date, type, manager, branch_id);
 
@@ -117,7 +118,7 @@ public class ShiftService {
         }
         repository.saveShift(newShift);
     }
-// finds all available employees for shift
+    // finds all available employees for shift
     public List<Employee> getAvailableEmployeesForShift(LocalDate date, char type) {
         List<Employee> allEmployees = employeeService.getAllEmployees();
 
@@ -133,7 +134,7 @@ public class ShiftService {
     public List<Shift> getShiftHistory() {
         return repository.getShiftHistory();
     }
-
+    // Commits a newly updated or completed shift structure into persistent record tracking
     public void addShiftToHistory(Shift shift) {
         repository.saveShift(shift);
     }
@@ -185,15 +186,21 @@ public class ShiftService {
         return false;
     }
 
+    // Interfaces with Transportation module to determine if storekeeper presence is mandatory
     public boolean mustHaveStoreKeeper(LocalDate date, char shiftType){
+        // Pulls delivery assignment records via Transportation mock routines
         return TransportationMock.hasTransportInShift(date,shiftType);
     }
 
+    // Polls Transportation tracking system to fetch expected driver requirements for a shift
     public int numOfDriversPerShift(LocalDate date, char shiftType){
+        // Queries active transit volumes from external sub-module boundaries
        return TransportationMock.getTransportCount(date, shiftType);
     }
 
+    // Queries and filters available drivers matching a distinct structural license capability rank
     public List<Driver> getAvailableDriversForTransport(LocalDate date, char type, String requiredLicense) {
+        // Chains availability calculations and targeted text license matches safely
         return employeeService.getAllDrivers().stream()
                 .filter(d -> isEmployeeAvailableForShift(d, date, type))
                 .filter(d -> d.getLicense().equals(requiredLicense))

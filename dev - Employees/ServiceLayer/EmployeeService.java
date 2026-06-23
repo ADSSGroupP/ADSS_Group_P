@@ -9,8 +9,6 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
 
-import static Transportation.TransportationMock.getTransportId;
-import java.util.stream.Collectors;
 /**
  * Service class responsible for managing employee-related operations.
  * Handles employee registration, archival (firing), and constraint submission deadlines.
@@ -22,10 +20,8 @@ public class EmployeeService {
     public EmployeeService(HRRepository repository) {
         this.repository = repository;
     }
-    /**
-     * Registers a new work constraint for an employee.
-     * @return Success message or an Error message if the deadline has passed or employee not found.
-     */
+
+    // Registers a new work constraint for an employee. Returns success or deadline/not found error.
     public String insertConstraint(int employeeId, Constraint constraint) {
         if (isDeadlinePassed()) {
             return "Error: The deadline for submitting/editing constraints has passed.";
@@ -57,10 +53,12 @@ public class EmployeeService {
         return repository.getAllEmployees();
     }
 
+    // Configures the dynamic scheduling lock deadline rule parameter
     public void setConstraintDeadline(LocalDateTime deadline) {
         this.constraintDeadline = deadline;
     }
 
+    // Evaluates the deadline system timer status bounds
     public boolean isDeadlinePassed() {
         if (constraintDeadline == null) return false; // If no deadline set, it's open
         return LocalDateTime.now().isAfter(constraintDeadline);
@@ -68,7 +66,7 @@ public class EmployeeService {
 
     //Updates an existing constraint by removing the old one and adding the new entry.
     public String editConstraint(int employeeId, LocalDate date, Constraint newConstraint) {
-        // CHANGE: Enforce deadline check for editing as well
+        // Enforce deadline check for editing as well
         if (isDeadlinePassed()) {
             return "Error: The deadline for editing constraints has passed.";
         }
@@ -101,22 +99,25 @@ public class EmployeeService {
         return "Success: Employee " + empToFire.getName() + " (ID: " + id + ") has been moved to fired records.";
     }
 
+    // Fetches all soft-deleted/archived employee rows matching inactive criteria
     public List<Employee> getFiredEmployees() {
-        return repository.getAllEmployees().stream()
-                .filter(e -> !e.isActive())
-                .collect(Collectors.toList());
+        // REFACTORED: Directly fetch filtered fired records from the repository layer
+        return repository.getFiredEmployees();
     }
 
+    // Validates if an employee holds the target license level matching active transport sequences
     public boolean checkLicence(int empID) {
         Employee emp = getEmployeeById(empID);
+        // Ensure the polymorphic type instance matches the Driver specialized subclass mapping
         if (emp instanceof Driver) {
             Driver driver = (Driver) emp;
             return driver.getLicense().equals(TransportationMock.getRequiredLicenseForTransport( TransportationMock.getTransportId()));
         }
         return false;
     }
-
+    // Filters and returns all registered records possessing a valid Driver type subclass
     public List<Driver> getAllDrivers() {
+        // Utilizes standard stream filter casts to compile specialized rosters safely
         return repository.getAllEmployees().stream()
                 .filter(e -> e instanceof Driver)
                 .map(e -> (Driver) e)

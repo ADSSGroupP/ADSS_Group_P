@@ -21,7 +21,7 @@ public class Shift {
     private int branch_id;
 
 
-    //constructor
+// Constructor to initialize a scheduled shift with its structural components
     public Shift (LocalDate date, char type, Employee shift_manager,int branch_id){
         this.date=date;
         this.type=type;
@@ -32,10 +32,7 @@ public class Shift {
     }
 
 
-    /**
-     * Generates a string representation of the shift, including the manager
-     * and a list of all current employee assignments.
-     */
+    // Generates a descriptive string visualization of the shift metadata and roster assignments
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -64,61 +61,45 @@ public class Shift {
         return sb.toString();
     }
 
+    //Getters and Setters
     public void setShift_model(Role role, int amount) {
         this.staffingRequirement.setRequirement(role, amount);
     }
-
     public void setShift_roles(Employee e, Role role) {
         this.shiftAssignment.assign(e, role);
     }
-
     public Map<Employee,Role> getShift_roles(){
         return this.shiftAssignment.getAssignments();
     }
-
     public Map<Role,Integer> getShift_model(){
         return this.staffingRequirement.getModel();
     }
-
     public StaffingRequirement getStaffingRequirement(){
         return this.staffingRequirement;
     }
-
-
     public Employee getShift_manager(){
         return this.shift_manager;
     }
-
     public LocalDate getDate(){
         return this.date;
     }
-
     public char getType(){
         return this.type;
     }
-
-
-
-    public void addExtraHoursAssignment(Employee e, int hours) {
-        // CHANGE: Method to record extra hours assignment
-        this.extra_hours_assignments.put(e, hours);
+    public ShiftAssignment getShiftAssignment(){
+        return this.shiftAssignment;
     }
-
     public Map<Employee, Integer> getExtraHoursAssignments() {
-        // CHANGE: Getter for displaying extra hours later
         return this.extra_hours_assignments;
     }
 
-    /**
-     * Validation method to check if an employee is already scheduled for this shift.
-     * Prevents double-booking an employee in multiple roles within the same shift.
-     * * @param employeeId The ID of the employee to check.
-     * @return true if the employee is already assigned, false otherwise.
-     */
+    // Records an allocated overtime allotment linked to a working employee
+    public void addExtraHoursAssignment(Employee e, int hours) {
+        this.extra_hours_assignments.put(e, hours);
+    }
+
+    // Checks if a specific national identifier is already logged into the active roster
     public boolean isEmployeeAssigned(int employeeId) {
         return this.shiftAssignment.isEmployeeAssigned(employeeId);
-    }
-    public ShiftAssignment getShiftAssignment(){
-        return this.shiftAssignment;
     }
 }
