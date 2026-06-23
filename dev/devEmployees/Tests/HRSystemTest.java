@@ -1,7 +1,7 @@
-package Tests;
-import DomainLayer.*;
-import ServiceLayer.*;
-import DataAccessLayer.*;
+package devEmployees.Tests;
+import devEmployees.DomainLayer.*;
+import devEmployees.ServiceLayer.*;
+import devEmployees.DataAccessLayer.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

@@ -1,4 +1,4 @@
-package Domain;
+package devInventory.Domain;
 
 import java.util.ArrayList;
 import java.util.List;

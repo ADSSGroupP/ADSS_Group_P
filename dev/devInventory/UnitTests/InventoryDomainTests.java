@@ -1,4 +1,4 @@
-package UnitTests;
+package devInventory.UnitTests;
 
 import org.junit.Test;
 import org.junit.Before;

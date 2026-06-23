@@ -1,4 +1,4 @@
-package DTO;
+package devEmployees.DTO;
 import java.time.LocalDate;
 import java.time.LocalTime;
 /**

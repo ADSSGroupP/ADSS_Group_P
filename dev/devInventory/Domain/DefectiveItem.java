@@ -1,4 +1,4 @@
-package Domain;
+package devInventory.Domain;
 
 /**
  * Represents an item identified as defective within the inventory.

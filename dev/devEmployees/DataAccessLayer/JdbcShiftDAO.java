@@ -1,6 +1,6 @@
-package DataAccessLayer;
+package devEmployees.DataAccessLayer;
 
-import DTO.ShiftDTO;
+import devEmployees.DTO.ShiftDTO;
 
 import java.sql.*;
 import java.time.LocalDate;

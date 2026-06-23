@@ -1,4 +1,4 @@
-package Presentation;
+package devInventory.Presentation;
 
 import Service.DatabaseManager;
 import Service.IntegrationDummyFunctions;

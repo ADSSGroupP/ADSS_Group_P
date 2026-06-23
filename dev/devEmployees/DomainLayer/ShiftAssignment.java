@@ -1,4 +1,4 @@
-package DomainLayer;
+package devEmployees.DomainLayer;
 
 import java.util.HashMap;
 import java.util.Map;

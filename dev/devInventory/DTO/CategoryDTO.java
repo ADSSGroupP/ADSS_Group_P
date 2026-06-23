@@ -1,4 +1,4 @@
-package DTO;
+package devInventory.DTO;
 
 /**
  * Data Transfer Object for Category.

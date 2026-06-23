@@ -1,4 +1,4 @@
-package DomainLayer;
+package devEmployees.DomainLayer;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;

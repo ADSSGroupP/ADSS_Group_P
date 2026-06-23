@@ -1,4 +1,4 @@
-package Domain;
+package devInventory.Domain;
 
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;

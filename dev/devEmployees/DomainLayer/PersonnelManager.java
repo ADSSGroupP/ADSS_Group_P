@@ -1,4 +1,4 @@
-package DomainLayer;
+package devEmployees.DomainLayer;
 
 /**
  * Represents the system administrator with high-level privileges.

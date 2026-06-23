@@ -1,6 +1,9 @@
-package DomainLayer;
+package devEmployees.DomainLayer;
 
-import DataAccessLayer.*;
+import devEmployees.DTO.ConstraintDTO;
+import devEmployees.DTO.EmployeeDTO;
+import devEmployees.DTO.ShiftDTO;
+import devEmployees.DataAccessLayer.*;
 import DTO.*;
 import java.time.LocalDate;
 import java.util.*;

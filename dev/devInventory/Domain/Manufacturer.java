@@ -1,4 +1,4 @@
-package Domain;
+package devInventory.Domain;
 
 /**
  * Represents a manufacturer of products in the inventory system.

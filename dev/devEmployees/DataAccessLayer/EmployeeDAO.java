@@ -1,6 +1,7 @@
-package DataAccessLayer;
+package devEmployees.DataAccessLayer;
 
-import DTO.EmployeeDTO;
+
+import devEmployees.DTO.EmployeeDTO;
 
 import java.util.List;
 /**

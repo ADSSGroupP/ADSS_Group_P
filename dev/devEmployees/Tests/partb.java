@@ -1,9 +1,9 @@
-package Tests;
-import DomainLayer.*;
-import ServiceLayer.*;
+package devEmployees.Tests;
+import devEmployees.DomainLayer.*;
+import devEmployees.ServiceLayer.*;
 import DTO.*;
-import DataAccessLayer.*;
-import Transportation.TransportationMock;
+import devEmployees.DataAccessLayer.*;
+import devEmployees.Transportation.TransportationMock;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

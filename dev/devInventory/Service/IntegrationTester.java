@@ -1,4 +1,4 @@
-package Service;
+package devInventory.Service;
 
 import Domain.Product;
 

@@ -1,15 +1,15 @@
-package PresentationLayer;
-import DataAccessLayer.*;
-import DomainLayer.HRRepository;
-import DomainLayer.HRRepositoryImpl;
-import ServiceLayer.EmployeeService;
-import ServiceLayer.ShiftService;
+package devEmployees.PresentationLayer;
+import devEmployees.DataAccessLayer.*;
+import devEmployees.DomainLayer.HRRepository;
+import devEmployees.DomainLayer.HRRepositoryImpl;
+import devEmployees.ServiceLayer.EmployeeService;
+import devEmployees.ServiceLayer.ShiftService;
 
 
 public class Main {
     public static void main(String[] args) {
 
-        try { DataAccessLayer.Database.getConnection().close(); } catch (Exception e) {}
+        try { devEmployees.DataAccessLayer.Database.getConnection().close(); } catch (Exception e) {}
 
         EmployeeDAO employeeDAO = new JdbcEmployeeDAO();
         ConstraintDAO constraintDAO = new JdbcConstraintDAO();

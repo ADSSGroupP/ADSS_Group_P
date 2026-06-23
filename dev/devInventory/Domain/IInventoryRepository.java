@@ -1,4 +1,4 @@
-package Domain;
+package devInventory.Domain;
 
 import java.util.List;
 import java.util.Map;

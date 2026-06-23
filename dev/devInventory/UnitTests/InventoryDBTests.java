@@ -1,4 +1,4 @@
-package UnitTests;
+package devInventory.UnitTests;
 
 import Domain.*;
 import Service.*;

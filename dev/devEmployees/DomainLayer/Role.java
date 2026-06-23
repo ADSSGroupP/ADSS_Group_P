@@ -1,4 +1,4 @@
-package DomainLayer;
+package devEmployees.DomainLayer;
 
 public enum Role {
     CASHIER("Cashier"),

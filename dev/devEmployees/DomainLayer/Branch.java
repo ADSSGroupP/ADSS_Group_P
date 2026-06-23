@@ -1,4 +1,4 @@
-package DomainLayer;
+package devEmployees.DomainLayer;
 
 /**
  * Domain entity representing a retail store branch within the corporate network.
