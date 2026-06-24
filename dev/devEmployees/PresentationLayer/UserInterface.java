@@ -94,6 +94,7 @@ public class UserInterface {
                 handleHRChoice(choice);
             } catch (Exception e) {
                 System.out.println("Invalid input.");
+                e.printStackTrace();
             }
         }
     }

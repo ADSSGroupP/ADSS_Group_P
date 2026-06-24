@@ -1,7 +1,7 @@
 package devInventory.Service;
 
-import Domain.Product;
-import Domain.Supplier;
+import devInventory.Domain.Product;
+import devInventory.Domain.Supplier;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

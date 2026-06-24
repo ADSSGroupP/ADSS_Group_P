@@ -1,8 +1,8 @@
 package devInventory.Presentation;
 
-import Service.InventoryService;
-import Domain.*;
-import DTO.*;
+import devInventory.Service.InventoryService;
+import devInventory.Domain.*;
+import devInventory.DTO.*;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;

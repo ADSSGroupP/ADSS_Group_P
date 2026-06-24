@@ -1,8 +1,8 @@
 package devInventory.Presentation;
 
-import Service.DatabaseManager;
-import Service.InventoryService;
-import Domain.*;
+import devInventory.Service.DatabaseManager;
+import devInventory.Service.InventoryService;
+import devInventory.Domain.*;
 import java.sql.SQLException;
 
 /**

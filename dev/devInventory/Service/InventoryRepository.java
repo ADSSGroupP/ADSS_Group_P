@@ -1,20 +1,20 @@
 package devInventory.Service;
 
-import Domain.*;
+import devInventory.Domain.*;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Repository implementation for the Inventory module.
  *
- * <p>Implements {@link Domain.IInventoryRepository} — the domain-level contract.
+ * <p>Implements {@link IInventoryRepository} — the domain-level contract.
  * Delegates all SQL operations to {@link InventoryDAO}, maintaining a clean
  * separation between domain logic and data access.</p>
  *
  * <p>Following GRASP Low Coupling and High Cohesion principles:
  * this class speaks domain language; {@link InventoryDAO} speaks SQL.</p>
  */
-public class InventoryRepository implements Domain.IInventoryRepository {
+public class InventoryRepository implements IInventoryRepository {
 
     private final InventoryDAO dao;
 

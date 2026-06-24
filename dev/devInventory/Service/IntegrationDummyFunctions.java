@@ -1,6 +1,6 @@
 package devInventory.Service;
 
-import Domain.Product;
+import devInventory.Domain.Product;
 
 /**
  * Integration bridge between the Inventory module and the Suppliers module.

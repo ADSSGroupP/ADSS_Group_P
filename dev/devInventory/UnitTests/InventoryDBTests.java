@@ -1,13 +1,12 @@
 package devInventory.UnitTests;
 
-import Domain.*;
-import Service.*;
-import DTO.*;
-import org.junit.*;
+import devInventory.Domain.*;
+import devInventory.Service.*;
+import devInventory.DTO.*;
+import org.junit.jupiter.api.*;
 import java.sql.*;
 import java.util.List;
-import static org.junit.Assert.*;
-
+import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration & Unit tests for Assignment 2 additions.
  * Tests focus on DB persistence, Flow 3 (transfer), and automatic orders.
@@ -19,7 +18,7 @@ public class InventoryDBTests {
     private Manufacturer tnuva;
     private Category dairy;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         service = new InventoryService();
         tnuva   = new Manufacturer(1, "Tnuva");
@@ -27,7 +26,7 @@ public class InventoryDBTests {
         service.addCategory(dairy);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         service.deleteProduct(901);
         service.deleteProduct(902);
@@ -65,11 +64,11 @@ public class InventoryDBTests {
         InventoryService service2 = new InventoryService();
         ProductDTO loaded = service2.getProductDTO(901);
 
-        assertNotNull("Product should be loaded from DB", loaded);
-        assertEquals("Name should match", "DB Milk", loaded.name());
-        assertEquals("Storage should match", 40, loaded.storageAmount());
-        assertEquals("Shelf should match", 10, loaded.shelfAmount());
-        assertEquals("Min stock should match", 15, loaded.minStock());
+        assertNotNull(loaded, "Product should be loaded from DB");
+        assertEquals("DB Milk", loaded.name(), "Name should match");
+        assertEquals(40, loaded.storageAmount(), "Storage should match");
+        assertEquals(10, loaded.shelfAmount(), "Shelf should match");
+        assertEquals(15, loaded.minStock(), "Min stock should match");
     }
 
     // ─── Test 2: Stock update persists to DB ──────────────────────────────────
@@ -90,8 +89,8 @@ public class InventoryDBTests {
         ProductDTO loaded = service2.getProductDTO(902);
 
         assertNotNull(loaded);
-        assertEquals("Warehouse should be 30", 30, loaded.storageAmount());
-        assertEquals("Shelf should be 15", 15, loaded.shelfAmount());
+        assertEquals(30, loaded.storageAmount(), "Warehouse should be 30");
+        assertEquals(15, loaded.shelfAmount(), "Shelf should be 15");
     }
 
     // ─── Test 3: Delete product removes from DB ───────────────────────────────
@@ -106,11 +105,10 @@ public class InventoryDBTests {
         service.addProduct(p);
 
         boolean deleted = service.deleteProduct(903);
-        assertTrue("Delete should return true", deleted);
+        assertTrue(deleted, "Delete should return true");
 
         InventoryService service2 = new InventoryService();
-        assertNull("Product should not exist in DB after delete", service2.getProductDTO(903));
-    }
+        assertNull(service2.getProductDTO(903), "Product should not exist in DB after delete");    }
 
     // ─── Test 4: Transfer warehouse → shelf persists ──────────────────────────
 
@@ -127,17 +125,17 @@ public class InventoryDBTests {
         service.addProduct(p);
 
         boolean result = service.transferToShelf(904, 20);
-        assertTrue("Transfer should succeed", result);
+        assertTrue(result, "Transfer should succeed");
 
         ProductDTO inMemory = service.getProductDTO(904);
-        assertEquals("Warehouse should be 30", 30, inMemory.storageAmount());
-        assertEquals("Shelf should be 30", 30, inMemory.shelfAmount());
+        assertEquals(30, inMemory.storageAmount(), "Warehouse should be 30");
+        assertEquals(30, inMemory.shelfAmount(), "Shelf should be 30");
 
         InventoryService service2 = new InventoryService();
         ProductDTO loaded = service2.getProductDTO(904);
         assertNotNull(loaded);
-        assertEquals("DB warehouse should be 30", 30, loaded.storageAmount());
-        assertEquals("DB shelf should be 30", 30, loaded.shelfAmount());
+        assertEquals(30, loaded.storageAmount(), "DB warehouse should be 30");
+        assertEquals(30, loaded.shelfAmount(), "DB shelf should be 30");
     }
 
     // ─── Test 5: Transfer fails when warehouse insufficient ───────────────────
@@ -154,11 +152,11 @@ public class InventoryDBTests {
         service.addProduct(p);
 
         boolean result = service.transferToShelf(905, 50);
-        assertFalse("Transfer should fail — not enough warehouse stock", result);
+        assertFalse(result, "Transfer should fail — not enough warehouse stock");
 
         ProductDTO dto = service.getProductDTO(905);
-        assertEquals("Warehouse should remain unchanged", 5, dto.storageAmount());
-        assertEquals("Shelf should remain unchanged", 10, dto.shelfAmount());
+        assertEquals(5, dto.storageAmount(), "Warehouse should remain unchanged");
+        assertEquals(10, dto.shelfAmount(), "Shelf should remain unchanged");
     }
 
     // ─── Test 6: Low stock alert saved to DB ─────────────────────────────────
@@ -176,8 +174,8 @@ public class InventoryDBTests {
         service.updateProductStock(906, 3, 2);
 
         List<LowStockAlertDTO> alerts = service.getAlertDTOs();
-        assertFalse("Alert should be generated", alerts.isEmpty());
-        assertEquals("Alert product ID should match", 906, alerts.get(0).productId());
+        assertFalse(alerts.isEmpty(), "Alert should be generated");
+        assertEquals(906, alerts.get(0).productId(), "Alert product ID should match");
 
         Connection conn = DatabaseManager.getConnection();
         PreparedStatement ps = conn.prepareStatement(
@@ -185,7 +183,7 @@ public class InventoryDBTests {
         ps.setInt(1, 906);
         ResultSet rs = ps.executeQuery();
         assertTrue(rs.next());
-        assertTrue("Alert should be saved in DB", rs.getInt(1) > 0);
+        assertTrue(rs.getInt(1) > 0, "Alert should be saved in DB");
     }
 
     // ─── Test 7: Category saved to DB ────────────────────────────────────────
@@ -201,7 +199,7 @@ public class InventoryDBTests {
         InventoryService service2 = new InventoryService();
         List<CategoryDTO> found = service2.getCategoriesDTOByNames(java.util.Arrays.asList("TestSnacks"));
 
-        assertFalse("Category should be found in DB", found.isEmpty());
+        assertFalse(found.isEmpty(), "Category should be found in DB");
         assertEquals("Category name should match", "TestSnacks", found.get(0).name());
 
         try {
@@ -226,24 +224,21 @@ public class InventoryDBTests {
         service.addProduct(p);
 
         boolean success = service.logDefectiveAndUpdateStock(907, 3, "Store");
-        assertTrue("logDefectiveAndUpdateStock should return true", success);
+        assertTrue(success, "logDefectiveAndUpdateStock should return true");
 
         ProductDTO dto = service.getProductDTO(907);
-        assertEquals("Shelf should be reduced by 3", 7, dto.shelfAmount());
-
+        assertEquals(7, dto.shelfAmount(), "Shelf should be reduced by 3");
         Connection conn = DatabaseManager.getConnection();
         PreparedStatement ps = conn.prepareStatement(
                 "SELECT COUNT(*) FROM defective_items WHERE product_id = ?");
         ps.setInt(1, 907);
         ResultSet rs = ps.executeQuery();
         assertTrue(rs.next());
-        assertEquals("Defective item should be saved in DB", 1, rs.getInt(1));
-
+        assertEquals(1, rs.getInt(1), "Defective item should be saved in DB");
         InventoryService service2 = new InventoryService();
         ProductDTO loaded = service2.getProductDTO(907);
         assertNotNull(loaded);
-        assertEquals("DB shelf should reflect deduction", 7, loaded.shelfAmount());
-    }
+        assertEquals(7, loaded.shelfAmount(), "DB shelf should reflect deduction");    }
 
     // ─── Test 9: Automatic order triggered on shortage ────────────────────────
 
@@ -260,11 +255,9 @@ public class InventoryDBTests {
         service.addProduct(p);
 
         ProductDTO dto = service.getProductDTO(908);
-        assertTrue("Product should be below min stock", dto.totalAmount() <= dto.minStock());
-
+        assertTrue(dto.totalAmount() <= dto.minStock(), "Product should be below min stock");
         int expected = dto.targetQuantity() - dto.totalAmount();
-        assertEquals("Amount to order should be 42", expected, p.getAmountToOrder());
-    }
+        assertEquals(expected, p.getAmountToOrder(), "Amount to order should be 42");    }
 
     // ─── Test 10: Periodic order fires for matching day regardless of stock ───
 
@@ -296,14 +289,12 @@ public class InventoryDBTests {
         service.addProduct(p2);
 
         // Verify p1 delivery day matches and p2 does not
-        assertEquals("p1 delivery day should be Monday", 2, p1.getDeliveryDay());
-        assertEquals("p2 delivery day should be Wednesday", 4, p2.getDeliveryDay());
-
+        assertEquals(2, p1.getDeliveryDay(), "p1 delivery day should be Monday");
+        assertEquals(4, p2.getDeliveryDay(), "p2 delivery day should be Wednesday");
         // Verify quantity calculation for periodic order
         int expectedQty = Math.max(p1.getTargetQuantity(),
                 p1.getMin_stock() - p1.getGeneral_amount() + 1);
-        assertTrue("Order quantity should be at least targetQuantity", expectedQty >= p1.getTargetQuantity());
-
+        assertTrue(expectedQty >= p1.getTargetQuantity(), "Order quantity should be at least targetQuantity");
         // Run periodic check for Monday - only p1 should be ordered
         service.checkAndProcessPeriodicOrders(2);
 

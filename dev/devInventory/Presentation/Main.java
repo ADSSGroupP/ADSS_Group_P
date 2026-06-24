@@ -1,8 +1,8 @@
 package devInventory.Presentation;
 
-import Service.DatabaseManager;
-import Service.IntegrationDummyFunctions;
-import Service.InventoryService;
+import devInventory.Service.DatabaseManager;
+import devInventory.Service.IntegrationDummyFunctions;
+import devInventory.Service.InventoryService;
 
 /**
  * Entry point for the Super-Li Inventory Management System.

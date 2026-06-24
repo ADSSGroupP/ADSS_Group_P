@@ -1,6 +1,6 @@
 package devInventory.Service;
 
-import Domain.Product;
+import devInventory.Domain.Product;
 
 /**
  * Logic-based testing class to verify integration between modules.

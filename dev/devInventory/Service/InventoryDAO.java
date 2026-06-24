@@ -1,6 +1,6 @@
 package devInventory.Service;
 
-import Domain.*;
+import devInventory.Domain.*;
 import java.sql.*;
 import java.util.*;
 

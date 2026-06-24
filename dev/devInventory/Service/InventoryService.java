@@ -3,8 +3,8 @@ package devInventory.Service;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
-import Domain.*;
-import DTO.*;
+import devInventory.Domain.*;
+import devInventory.DTO.*;
 
 public class InventoryService {
 
@@ -14,7 +14,7 @@ public class InventoryService {
     private List<Discount>         systemDiscounts;
     private List<LowStockAlert>    alerts;
 
-    private final Domain.IInventoryRepository repo;
+    private final InventoryRepository repo;
 
     public InventoryService() {
         this.repo = new InventoryRepository();
